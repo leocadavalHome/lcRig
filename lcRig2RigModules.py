@@ -59,23 +59,7 @@ class Limb():
         self.limbDict['nameConventions'] = None
         ##IMPLEMENTAR padroes de nome 
 
-    def orientMatrix(self, mvector , normal,pos, axis ):                
-        AB=mvector
-        nNormal=normal.normal()
-        A=pos
-        #criando a matriz do joint conforme a orientacao setada
-        x = nNormal ^ AB.normal()
-        t = x.normal() ^ nNormal  
-              
-        if axis=='Y':
-            
-            list = [ nNormal.x, nNormal.y, nNormal.z, 0, t.x, t.y, t.z, 0, x.x, x.y, x.z, 0, A.x, A.y,A.z,1]
-        elif axis=='Z':
-            list = [ x.x, x.y, x.z, 0,nNormal.x, nNormal.y, nNormal.z, 0,t.x, t.y, t.z, 0, A.x, A.y,A.z,1]
-        else:
-            list = [ t.x, t.y, t.z, 0,nNormal.x, nNormal.y, nNormal.z, 0, x.x*-1, x.y*-1, x.z*-1, 0, A.x, A.y,A.z,1]                 
-        m=om.MMatrix (list)
-        return m
+
 
     def doGuide(self,**kwargs): 
         self.limbGuideDict.update(kwargs)
@@ -148,7 +132,7 @@ class Limb():
             
         n = BC^AB
         
-        m = self.orientMatrix (mvector=AB,normal=n,pos=A, axis=self.axis)            
+        m = orientMatrix (mvector=AB,normal=n,pos=A, axis=self.axis)            
         #cria joint1
         pm.select(cl=True)
         self.startJnt = pm.joint()
@@ -157,7 +141,7 @@ class Limb():
         
         #cria joint2
         #criando a matriz do joint conforme a orientacao setada
-        m = self.orientMatrix (mvector=BC,normal=n,pos=B, axis=self.axis)  
+        m = orientMatrix (mvector=BC,normal=n,pos=B, axis=self.axis)  
         pm.select(cl=True)
         self.midJnt= pm.joint()
         pm.xform (self.midJnt, m = m, ws=True) 
@@ -179,14 +163,23 @@ class Limb():
         ##joint4(hand) se estiver setado nas opcoes      
         if self.handJoint:
             #joint4
-            #criando a matriz do joint conforme a orientacao setada            
+            # Faz a orientacao do ultimo bone independente da normal do braco
+            # Se o cotovelo estiver para frente inverte a normal
+            # limitacao: se o limb for criado no eixo Z o calculo nao eh preciso
+                      
             if self.flipAxis:
-                Z=om.MVector(0,0,(1*n.normal().y))
-            else:    
-                Z=om.MVector(0,0,(-1*n.normal().y))
-            n=CD^Z
+                if n.y<0:
+                    Z=om.MVector(0,0,1)
+                else:
+                    Z=om.MVector(0,0,-1)
+            else:
+                if n.y>0:
+                    Z=om.MVector(0,0,-1)
+                else:
+                    Z=om.MVector(0,0,1)    
+            n=CD^Z            
             
-            m = self.orientMatrix (mvector=CD,normal=n,pos=C, axis=self.axis)              
+            m = orientMatrix (mvector=CD,normal=n,pos=C, axis=self.axis)              
             pm.select(cl=True)
             self.handJnt= pm.joint()
             pm.xform (self.handJnt, m = m, ws=True) 
@@ -229,9 +222,22 @@ class Limb():
         
         ##Estrutura IK
         ikH = pm.ikHandle (sj=self.startJnt, ee=self.endJnt, sol="ikRPsolver")
+
         displaySetup=self.limbDict['ikCntrlSetup'].copy()
         cntrlName = displaySetup['nameTempl']
-        ikCntrl = cntrlCrv(name = cntrlName, obj=self.handJnt,**displaySetup)
+        ikCntrl = cntrlCrv(name = cntrlName, obj=ikH[0],**displaySetup)
+        
+        #orienta o controle ik de modo a ter aproximadamente a orientacao do eixo global
+        #mas aponta o eixo X para a ponta do ultimo bone               
+        mat=pm.xform (ikCntrl.getParent(), q=True, m=True, ws=True)
+        matrix= om.MMatrix (mat)
+        Zcomponent = om.MVector (0,0,-1)
+        Zaxis = matrix * Zcomponent
+        normal = CD^Zaxis
+
+        #CD eh o vetor de direcao do ultimo joint                
+        ori = orientMatrix(CD, normal, C, self.axis)       
+        pm.xform (ikCntrl.getParent(), m=ori, ws=True)
         ikH[0].setParent(ikCntrl)
         ikCntrl.addAttr ('pin', at='float',min=0, max=1,dv=0, k=1)
         ikCntrl.addAttr ('bias', at='float',min=-0.9, max=0.9, k=1)
