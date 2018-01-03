@@ -59,6 +59,24 @@ class Limb():
         self.limbDict['nameConventions'] = None
         ##IMPLEMENTAR padroes de nome 
 
+    def orientMatrix(self, mvector , normal,pos, axis ):                
+        AB=mvector
+        nNormal=normal.normal()
+        A=pos
+        #criando a matriz do joint conforme a orientacao setada
+        x = nNormal ^ AB.normal()
+        t = x.normal() ^ nNormal  
+              
+        if axis=='Y':
+            
+            list = [ nNormal.x, nNormal.y, nNormal.z, 0, t.x, t.y, t.z, 0, x.x, x.y, x.z, 0, A.x, A.y,A.z,1]
+        elif axis=='Z':
+            list = [ x.x, x.y, x.z, 0,nNormal.x, nNormal.y, nNormal.z, 0,t.x, t.y, t.z, 0, A.x, A.y,A.z,1]
+        else:
+            list = [ t.x, t.y, t.z, 0,nNormal.x, nNormal.y, nNormal.z, 0, x.x*-1, x.y*-1, x.z*-1, 0, A.x, A.y,A.z,1]                 
+        m=om.MMatrix (list)
+        return m
+
     def doGuide(self,**kwargs): 
         self.limbGuideDict.update(kwargs)
          ## cria guia se não existir  
@@ -129,22 +147,9 @@ class Limb():
             CD = D-C
             
         n = BC^AB
-        nNormal = n.normal()
-                
+        
+        m = self.orientMatrix (mvector=AB,normal=n,pos=A, axis=self.axis)            
         #cria joint1
-        #criando a matriz do joint conforme a orientacao setada
-        x = nNormal ^ AB.normal()
-        t = x.normal() ^ nNormal  
-              
-        if self.axis=='Y':
-            
-            list = [ nNormal.x, nNormal.y, nNormal.z, 0, t.x, t.y, t.z, 0, x.x, x.y, x.z, 0, A.x, A.y,A.z,1]
-        elif self.axis=='Z':
-            list = [ x.x, x.y, x.z, 0,nNormal.x, nNormal.y, nNormal.z, 0,t.x, t.y, t.z, 0, A.x, A.y,A.z,1]
-        else:
-            list = [ t.x, t.y, t.z, 0,nNormal.x, nNormal.y, nNormal.z, 0, x.x*-1, x.y*-1, x.z*-1, 0, A.x, A.y,A.z,1]
-                 
-        m= om.MMatrix (list)
         pm.select(cl=True)
         self.startJnt = pm.joint()
         pm.xform (self.startJnt, m = m, ws=True) 
@@ -152,16 +157,7 @@ class Limb():
         
         #cria joint2
         #criando a matriz do joint conforme a orientacao setada
-        x = nNormal ^ BC.normal()
-        t = x.normal() ^ nNormal
-        if self.axis=='Y':
-            list = [ nNormal.x, nNormal.y, nNormal.z,0,t.x, t.y, t.z, 0, x.x, x.y, x.z, 0, B.x, B.y, B.z,1]
-        elif self.axis =='Z':
-            list = [ x.x, x.y, x.z, 0,nNormal.x, nNormal.y, nNormal.z, 0,t.x, t.y, t.z, 0, B.x, B.y, B.z,1]
-        else:   
-            list = [ t.x, t.y, t.z, 0, nNormal.x, nNormal.y, nNormal.z, 0 , x.x*-1, x.y*-1, x.z*-1, 0, B.x, B.y, B.z,1]  
-               
-        m= om.MMatrix (list)
+        m = self.orientMatrix (mvector=BC,normal=n,pos=B, axis=self.axis)  
         pm.select(cl=True)
         self.midJnt= pm.joint()
         pm.xform (self.midJnt, m = m, ws=True) 
@@ -185,21 +181,12 @@ class Limb():
             #joint4
             #criando a matriz do joint conforme a orientacao setada            
             if self.flipAxis:
-                if nNormal.y < 0:
-                    nNormal=om.MVector((0,-1,0))
-                else:
-                    nNormal=om.MVector((0,1,0))
-                        
-            x = nNormal ^ CD.normal()
-            t = x.normal() ^ nNormal
-            if self.axis=='Y':
-                list = [ nNormal.x, nNormal.y, nNormal.z, 0, t.x, t.y, t.z, 0, x.x, x.y, x.z, 0, C.x, C.y,C.z,1]
-            elif self.axis=='Z':
-                list = [ x.x, x.y, x.z, 0,nNormal.x, nNormal.y, nNormal.z, 0,t.x, t.y, t.z, 0, C.x, C.y,C.z,1]
-            else:
-                list = [ t.x, t.y, t.z, 0,nNormal.x, nNormal.y, nNormal.z, 0, x.x*-1, x.y*-1, x.z*-1, 0, C.x, C.y,C.z,1]
-          
-            m= om.MMatrix (list)
+                Z=om.MVector(0,0,(1*n.normal().y))
+            else:    
+                Z=om.MVector(0,0,(-1*n.normal().y))
+            n=CD^Z
+            
+            m = self.orientMatrix (mvector=CD,normal=n,pos=C, axis=self.axis)              
             pm.select(cl=True)
             self.handJnt= pm.joint()
             pm.xform (self.handJnt, m = m, ws=True) 
