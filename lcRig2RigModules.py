@@ -165,8 +165,7 @@ class Limb():
             #joint4
             # Faz a orientacao do ultimo bone independente da normal do braco
             # Se o cotovelo estiver para frente inverte a normal
-            # limitacao: se o limb for criado no eixo Z o calculo nao eh preciso
-                      
+            # limitacao: se o limb for criado no eixo Z o calculo nao eh preciso                     
             if self.flipAxis:
                 if n.y<0:
                     Z=om.MVector(0,0,1)
@@ -178,7 +177,7 @@ class Limb():
                 else:
                     Z=om.MVector(0,0,1)    
             n=CD^Z            
-            
+           
             m = orientMatrix (mvector=CD,normal=n,pos=C, axis=self.axis)              
             pm.select(cl=True)
             self.handJnt= pm.joint()

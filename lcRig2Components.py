@@ -1450,7 +1450,24 @@ def addSpc (target, spaceList, switcher, type):
     	cond.colorIfTrueR.set(1)
     	cond.colorIfFalseR.set(0)     
     	cond.outColor.outColorR >> cns.attr(space+'_spcW'+str(index))
-       
+
+def orientMatrix(mvector, normal, pos, axis): 
+    #criando a matriz do conforme a orientacao dada pela direcao AB, pela normal e na posicao pos               
+    AB=mvector
+    nNormal=normal.normal()
+    A=pos   
+    x = nNormal ^ AB.normal()
+    t = x.normal() ^ nNormal  
+          
+    if axis=='Y':        
+        list = [ nNormal.x, nNormal.y, nNormal.z, 0, t.x, t.y, t.z, 0, x.x, x.y, x.z, 0, A.x, A.y,A.z,1]
+    elif axis=='Z':
+        list = [ x.x, x.y, x.z, 0,nNormal.x, nNormal.y, nNormal.z, 0,t.x, t.y, t.z, 0, A.x, A.y,A.z,1]
+    else:
+        list = [ t.x, t.y, t.z, 0,nNormal.x, nNormal.y, nNormal.z, 0, x.x*-1, x.y*-1, x.z*-1, 0, A.x, A.y,A.z,1]                 
+    m=om.MMatrix (list)
+    return m
+      
 ### Ainda nao usadas       
 def composeMMatrix (vecX, vecY, vecZ, vecP ):
     list = [ vecX.x, vecX.y, vecX.z, 0, vecY.x, vecY.y, vecY.z, 0, vecZ.x, vecZ.y, vecZ.z, 0, vecP.x, vecP.y,vecP.z,1]
