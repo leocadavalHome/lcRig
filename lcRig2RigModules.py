@@ -6,7 +6,7 @@ class Limb():
         Cria um Limb
         Parametros: 
             name (string): nome do novo limb            
-            ikCntrl (string): nome
+            ikCntrl (string): nome 
             startCntrl (string): nome
             midCntrl (string): nome
             endCntrl (string): nome
@@ -36,7 +36,7 @@ class Limb():
                        'moveAll1Cntrl':None} #valores default
 
         self.limbDict.update(kwargs) # atualiza com o q foi entrado
-
+        self.GuideColor=(1,0,1)
         self.name = name
         self.flipAxis = flipAxis
         self.axis = axis
@@ -58,6 +58,8 @@ class Limb():
         self.limbDict['nodeTree'] = {}
         self.limbDict['nameConventions'] = None
         ##IMPLEMENTAR padroes de nome 
+
+
 
     def doGuide(self,**kwargs): 
         self.limbGuideDict.update(kwargs)
@@ -129,92 +131,70 @@ class Limb():
             CD = D-C
             
         n = BC^AB
-        nNormal = n.normal()
-                
+        
+        m = orientMatrix (mvector=AB,normal=n,pos=A, axis=self.axis)            
         #cria joint1
-        #criando a matriz do joint conforme a orientacao setada
-        x = nNormal ^ AB.normal()
-        t = x.normal() ^ nNormal  
-              
-        if self.axis=='Y':
-            
-            list = [ nNormal.x, nNormal.y, nNormal.z, 0, t.x, t.y, t.z, 0, x.x, x.y, x.z, 0, A.x, A.y,A.z,1]
-        elif self.axis=='Z':
-            list = [ x.x, x.y, x.z, 0,nNormal.x, nNormal.y, nNormal.z, 0,t.x, t.y, t.z, 0, A.x, A.y,A.z,1]
-        else:
-            list = [ t.x, t.y, t.z, 0,nNormal.x, nNormal.y, nNormal.z, 0, x.x*-1, x.y*-1, x.z*-1, 0, A.x, A.y,A.z,1]
-                 
-        m= om.MMatrix (list)
         pm.select(cl=True)
-        j1 = pm.joint()
-        pm.xform (j1, m = m, ws=True) 
-        pm.makeIdentity (j1, apply=True, r=1, t=0, s=0, n=0, pn=0)
+        self.startJnt = pm.joint()
+        pm.xform (self.startJnt, m = m, ws=True) 
+        pm.makeIdentity (self.startJnt, apply=True, r=1, t=0, s=0, n=0, pn=0)
         
         #cria joint2
         #criando a matriz do joint conforme a orientacao setada
-        x = nNormal ^ BC.normal()
-        t = x.normal() ^ nNormal
-        if self.axis=='Y':
-            list = [ nNormal.x, nNormal.y, nNormal.z,0,t.x, t.y, t.z, 0, x.x, x.y, x.z, 0, B.x, B.y, B.z,1]
-        elif self.axis =='Z':
-            list = [ x.x, x.y, x.z, 0,nNormal.x, nNormal.y, nNormal.z, 0,t.x, t.y, t.z, 0, B.x, B.y, B.z,1]
-        else:   
-            list = [ t.x, t.y, t.z, 0, nNormal.x, nNormal.y, nNormal.z, 0 , x.x*-1, x.y*-1, x.z*-1, 0, B.x, B.y, B.z,1]  
-               
-        m= om.MMatrix (list)
+        m = orientMatrix (mvector=BC,normal=n,pos=B, axis=self.axis)  
         pm.select(cl=True)
-        j2= pm.joint()
-        pm.xform (j2, m = m, ws=True) 
-        pm.makeIdentity (j2, apply=True, r=1, t=0, s=0, n=0, pn=0)
+        self.midJnt= pm.joint()
+        pm.xform (self.midJnt, m = m, ws=True) 
+        pm.makeIdentity (self.midJnt, apply=True, r=1, t=0, s=0, n=0, pn=0)
         
         #cria joint3
         #aqui so translada o joint, usa a mesma orientacao
         pm.select(cl=True)
-        j3=pm.joint()
-        pm.xform (j3, m = m, ws=True) 
-        pm.xform (j3, t= C, ws=True)
-        pm.makeIdentity (j3, apply=True, r=1, t=0, s=0, n=0, pn=0)
+        self.endJnt=pm.joint()
+        pm.xform (self.endJnt, m = m, ws=True) 
+        pm.xform (self.endJnt, t= C, ws=True)
+        pm.makeIdentity (self.endJnt, apply=True, r=1, t=0, s=0, n=0, pn=0)
         
         #hierarquia
-        pm.parent (j2, j1)
-        pm.parent (j3, j2)
-        j1.setParent (limbMoveAll)
+        pm.parent (self.midJnt, self.startJnt)
+        pm.parent (self.endJnt, self.midJnt)
+        self.startJnt.setParent (limbMoveAll)
         
         ##joint4(hand) se estiver setado nas opcoes      
         if self.handJoint:
             #joint4
-            #criando a matriz do joint conforme a orientacao setada            
+            # Faz a orientacao do ultimo bone independente da normal do braco
+            # Se o cotovelo estiver para frente inverte a normal
+            # limitacao: se o limb for criado no eixo Z o calculo nao eh preciso
+                      
             if self.flipAxis:
-                if nNormal.y < 0:
-                    nNormal=om.MVector((0,-1,0))
+                if n.y<0:
+                    Z=om.MVector(0,0,1)
                 else:
-                    nNormal=om.MVector((0,1,0))
-                        
-            x = nNormal ^ CD.normal()
-            t = x.normal() ^ nNormal
-            if self.axis=='Y':
-                list = [ nNormal.x, nNormal.y, nNormal.z, 0, t.x, t.y, t.z, 0, x.x, x.y, x.z, 0, C.x, C.y,C.z,1]
-            elif self.axis=='Z':
-                list = [ x.x, x.y, x.z, 0,nNormal.x, nNormal.y, nNormal.z, 0,t.x, t.y, t.z, 0, C.x, C.y,C.z,1]
+                    Z=om.MVector(0,0,-1)
             else:
-                list = [ t.x, t.y, t.z, 0,nNormal.x, nNormal.y, nNormal.z, 0, x.x*-1, x.y*-1, x.z*-1, 0, C.x, C.y,C.z,1]
-          
-            m= om.MMatrix (list)
+                if n.y>0:
+                    Z=om.MVector(0,0,-1)
+                else:
+                    Z=om.MVector(0,0,1)    
+            n=CD^Z            
+            
+            m = orientMatrix (mvector=CD,normal=n,pos=C, axis=self.axis)              
             pm.select(cl=True)
-            j4= pm.joint()
-            pm.xform (j4, m = m, ws=True) 
-            pm.makeIdentity (j4, apply=True, r=1, t=0, s=0, n=0, pn=0) 
+            self.handJnt= pm.joint()
+            pm.xform (self.handJnt, m = m, ws=True) 
+            pm.makeIdentity (self.handJnt, apply=True, r=1, t=0, s=0, n=0, pn=0) 
             
             #cria joint5 e so move
             pm.select(cl=True)
-            j5=pm.joint()
-            pm.xform (j5, m = m, ws=True) 
-            pm.xform (j5, t=D, ws=True)
-            pm.makeIdentity (j5, apply=True, r=1, t=0, s=0, n=0, pn=0)        
+            self.handTipJnt=pm.joint()
+            pm.xform (self.handTipJnt, m = m, ws=True) 
+            pm.xform (self.handTipJnt, t=D, ws=True)
+            pm.makeIdentity (self.handTipJnt, apply=True, r=1, t=0, s=0, n=0, pn=0)        
             
             #hierarquia        
-            pm.parent (j4, j3)
-            pm.parent (j5, j4)            
+            pm.parent (self.handJnt, self.endJnt)
+            pm.parent (self.handTipJnt, self.handJnt)            
                 
         ##Estrutura FK
         if self.axis=='Y'  or self.axis=='Z' or self.axis=='X':
@@ -225,26 +205,39 @@ class Limb():
         displaySetup= self.limbDict['moveAll1CntrlSetup'].copy()
         cntrlName = displaySetup['nameTempl']
 
-        moveAll1Cntrl = cntrlCrv( name = cntrlName, obj= j1 , **displaySetup)
+        moveAll1Cntrl = cntrlCrv( name = cntrlName, obj= self.startJnt , **displaySetup)
         
         displaySetup= self.limbDict['endCntrlSetup'].copy()
         cntrlName = displaySetup['nameTempl']                  
-        endCntrl = cntrlCrv (name=cntrlName, obj=j1,connType='parentConstraint', **displaySetup )
+        endCntrl = cntrlCrv (name=cntrlName, obj=self.startJnt,connType='parentConstraint', **displaySetup )
         
         endCntrl.addAttr('manualStretch', at='float',min=.1,dv=1, k=1)
         
         displaySetup=self.limbDict['midCntrlSetup'].copy()
         cntrlName = displaySetup['nameTempl']
-        midCntrl = cntrlCrv (name=cntrlName,obj=j2,connType = 'orientConstraint',**displaySetup)
+        midCntrl = cntrlCrv (name=cntrlName,obj=self.midJnt,connType = 'orientConstraint',**displaySetup)
         midCntrl.addAttr('manualStretch', at='float',min=.1,dv=1, k=1)
         
-        pm.pointConstraint (j2, midCntrl.getParent(), mo=True)
+        pm.pointConstraint (self.midJnt, midCntrl.getParent(), mo=True)
         
         ##Estrutura IK
-        ikH = pm.ikHandle (sj=j1, ee=j3, sol="ikRPsolver")
+        ikH = pm.ikHandle (sj=self.startJnt, ee=self.endJnt, sol="ikRPsolver")
+
         displaySetup=self.limbDict['ikCntrlSetup'].copy()
         cntrlName = displaySetup['nameTempl']
-        ikCntrl = cntrlCrv(name = cntrlName, obj=j4,**displaySetup)
+        ikCntrl = cntrlCrv(name = cntrlName, obj=ikH[0],**displaySetup)
+        
+        #orienta o controle ik de modo a ter aproximadamente a orientacao do eixo global
+        #mas aponta o eixo X para a ponta do ultimo bone               
+        mat=pm.xform (ikCntrl.getParent(), q=True, m=True, ws=True)
+        matrix= om.MMatrix (mat)
+        Zcomponent = om.MVector (0,0,-1)
+        Zaxis = matrix * Zcomponent
+        normal = CD^Zaxis
+
+        #CD eh o vetor de direcao do ultimo joint                
+        ori = orientMatrix(CD, normal, C, self.axis)       
+        pm.xform (ikCntrl.getParent(), m=ori, ws=True)
         ikH[0].setParent(ikCntrl)
         ikCntrl.addAttr ('pin', at='float',min=0, max=1,dv=0, k=1)
         ikCntrl.addAttr ('bias', at='float',min=-0.9, max=0.9, k=1)
@@ -255,7 +248,7 @@ class Limb():
         #pole vector
         displaySetup=self.limbDict['poleVecCntrlSetup'].copy()
         cntrlName = displaySetup['nameTempl']
-        poleVec = cntrlCrv(name=cntrlName, obj=j2,**displaySetup)
+        poleVec = cntrlCrv(name=cntrlName, obj=self.midJnt,**displaySetup)
         
         #calcula a direcao q deve ficar o polevector
         BA=B-A
@@ -281,13 +274,13 @@ class Limb():
         if self.handJoint:
             displaySetup=self.limbDict['startCntrlSetup']
             cntrlName=displaySetup['nameTempl']
-            startCntrl = cntrlCrv (name=cntrlName, obj=j4,**displaySetup)
+            startCntrl = cntrlCrv (name=cntrlName, obj=self.handJnt,**displaySetup)
             buf=pm.group (em=True)
-            matrix=pm.xform (j4, q=True, ws=True, m=True)
+            matrix=pm.xform (self.handJnt, q=True, ws=True, m=True)
             pm.xform (buf, m=matrix, ws=True)
             pm.parent (buf,ikCntrl)
-            handCnst = pm.orientConstraint (buf,startCntrl, j4, mo=False)
-            pm.pointConstraint (j3,startCntrl.getParent(), mo=True)
+            handCnst = pm.orientConstraint (buf,startCntrl, self.handJnt, mo=False)
+            pm.pointConstraint (self.endJnt,startCntrl.getParent(), mo=True)
             pm.parent (startCntrl.getParent(), midCntrl)
         
         #display
@@ -438,8 +431,8 @@ class Limb():
             limbMoveAll.ikfk >> handTargetAttrs [0]
         
         limbMoveAll.ikfk >> ikH[0].ikBlend      
-        ikfkBlend1.output >> j1.attr('scale'+axisName) 
-        ikfkBlend2.output >> j2.attr('scale'+axisName)
+        ikfkBlend1.output >> self.startJnt.attr('scale'+axisName) 
+        ikfkBlend2.output >> self.midJnt.attr('scale'+axisName)
         
         
         ##ikfk visibility
@@ -477,11 +470,11 @@ class Limb():
         self.limbDict['midCntrl'] = midCntrl
         self.limbDict['endCntrl'] = endCntrl
         self.limbDict['poleVec'] = poleVec
-        self.limbDict['joint1'] = j1
-        self.limbDict['joint2'] = j2
-        self.limbDict['joint3'] = j3
-        if j4:
-            self.limbDict['joint4'] = j4
+        self.limbDict['joint1'] = self.startJnt
+        self.limbDict['joint2'] = self.midJnt
+        self.limbDict['joint3'] = self.endJnt
+        if self.handJnt:
+            self.limbDict['joint4'] = self.handJnt
         self.limbDict['limbMoveAll'] = limbMoveAll
         
 class Finger:
@@ -1267,11 +1260,11 @@ class Spine:
         start=pm.xform(self.startGuide,q=True,t=True,ws=True)
         startTip=pm.xform(self.startTipGuide,q=True,t=True,ws=True)
         pm.select(cl=True)
-        startZeroJnt=pm.joint(p=(0,0,0))
+        self.startZeroJnt=pm.joint(p=(0,0,0))
         pm.select(cl=True)
-        startJnt=pm.joint(p=(0,0,0))
+        self.startJnt=pm.joint(p=(0,0,0))
         pm.select(cl=True)
-        startTipJnt=pm.joint(p=(0,0,0))
+        self.startTipJnt=pm.joint(p=(0,0,0))
      
         A=om.MVector(start)
         B=om.MVector(startTip)
@@ -1287,28 +1280,28 @@ class Spine:
         n=AB^Z
         x = n.normal() ^ AB.normal()
         t = x.normal() ^ n.normal()      
-        if axis=='Y':            
+        if self.axis=='Y':            
             list = [ n.normal().x, n.normal().y, n.normal().z, 0, t.x, t.y, t.z, 0, x.x, x.y, x.z, 0, A.x, A.y,A.z,1]
-        elif axis=='Z':
+        elif self.axis=='Z':
             list = [ x.x, x.y, x.z, 0,n.normal().x, n.normal().y, n.normal().z, 0,t.x, t.y, t.z, 0, A.x, A.y,A.z,1]
         else:
             list = [ t.x, t.y, t.z, 0,n.normal().x, n.normal().y, n.normal().z, 0, x.x*-1, x.y*-1, x.z*-1, 0, A.x, A.y,A.z,1]
         m= om.MMatrix (list)
-        pm.xform (startZeroJnt, m = m, ws=True) 
-        pm.xform (startJnt, m = m, ws=True) 
-        pm.xform (startTipJnt, m = m, ws=True) 
-        pm.xform (startTipJnt, t= B, ws=True) 
-        pm.parent (startJnt,startZeroJnt)
-        pm.parent (startTipJnt, startJnt)
+        pm.xform (self.startZeroJnt, m = m, ws=True) 
+        pm.xform (self.startJnt, m = m, ws=True) 
+        pm.xform (self.startTipJnt, m = m, ws=True) 
+        pm.xform (self.startTipJnt, t= B, ws=True) 
+        pm.parent (self.startJnt,self.startZeroJnt)
+        pm.parent (self.startTipJnt, self.startJnt)
         
         end=pm.xform(self.endGuide,q=True,t=True,ws=True)
         endTip=pm.xform(self.endTipGuide,q=True,t=True,ws=True)
         pm.select(cl=True)
-        endZeroJnt=pm.joint(p=(0,0,0))
+        self.endZeroJnt=pm.joint(p=(0,0,0))
         pm.select(cl=True)
-        endJnt=pm.joint(p=(0,0,0))
+        self.endJnt=pm.joint(p=(0,0,0))
         pm.select(cl=True)
-        endTipJnt=pm.joint(p=(0,0,0))
+        self.endTipJnt=pm.joint(p=(0,0,0))
 
         A=om.MVector(end)
         B=om.MVector(endTip)
@@ -1322,24 +1315,24 @@ class Spine:
         n=AB^Z
         x = n.normal() ^ AB.normal()
         t = x.normal() ^ n.normal()      
-        if axis=='Y':            
+        if self.axis=='Y':            
             list = [ n.normal().x, n.normal().y, n.normal().z, 0, t.x, t.y, t.z, 0, x.x, x.y, x.z, 0, A.x, A.y,A.z,1]
-        elif axis=='Z':
+        elif self.axis=='Z':
             list = [ x.x, x.y, x.z, 0,n.normal().x, n.normal().y, n.normal().z, 0,t.x, t.y, t.z, 0, A.x, A.y,A.z,1]
         else:
             list = [ t.x, t.y, t.z, 0,n.normal().x, n.normal().y, n.normal().z, 0, x.x*-1, x.y*-1, x.z*-1, 0, A.x, A.y,A.z,1]
         m= om.MMatrix (list)
-        pm.xform (endZeroJnt, m = m, ws=True) 
-        pm.xform (endJnt, m = m, ws=True) 
-        pm.xform (endTipJnt, m = m, ws=True) 
-        pm.xform (endTipJnt, t= B, ws=True) 
-        pm.parent (endJnt,endZeroJnt)
-        pm.parent (endTipJnt, endJnt)
+        pm.xform (self.endZeroJnt, m = m, ws=True) 
+        pm.xform (self.endJnt, m = m, ws=True) 
+        pm.xform (self.endTipJnt, m = m, ws=True) 
+        pm.xform (self.endTipJnt, t= B, ws=True) 
+        pm.parent (self.endJnt,self.endZeroJnt)
+        pm.parent (self.endTipJnt, self.endJnt)
         
         #cria os extratores de twist dos joints inicial e final
         #IMPLEMENTAR: twist do controle do meio
-        twistExtractor1= twistExtractor(startJnt)
-        twistExtractor2= twistExtractor(endJnt)
+        twistExtractor1= twistExtractor(self.startJnt)
+        twistExtractor2= twistExtractor(self.endJnt)
         twistExtractor1.extractorGrp.visibility.set(False)
         twistExtractor2.extractorGrp.visibility.set(False)
         
@@ -1390,14 +1383,14 @@ class Spine:
         cns3=pm.parentConstraint (endFkCntrl, endIkCntrl, spineRibbon.endCntrl, mo=True)
         
         #parenteia os joints das pontas nos controles do ribbon
-        startZeroJnt.setParent (spineRibbon.startCntrl.getParent())
-        endZeroJnt.setParent (spineRibbon.endCntrl.getParent())
+        self.startZeroJnt.setParent (spineRibbon.startCntrl.getParent())
+        self.endZeroJnt.setParent (spineRibbon.endCntrl.getParent())
         #e cria os constraints point no start joint zero e orient no start joint
         #o joint zero eh necessario para o twist extractor
-        pm.pointConstraint (spineRibbon.startCntrl, startZeroJnt, mo=True)
-        pm.orientConstraint (spineRibbon.startCntrl, startJnt, mo=True)
-        pm.pointConstraint (spineRibbon.endCntrl, endZeroJnt, mo=True)
-        pm.orientConstraint (spineRibbon.endCntrl, endJnt, mo=True)
+        pm.pointConstraint (spineRibbon.startCntrl, self.startZeroJnt, mo=True)
+        pm.orientConstraint (spineRibbon.startCntrl, self.startJnt, mo=True)
+        pm.pointConstraint (spineRibbon.endCntrl, self.endZeroJnt, mo=True)
+        pm.orientConstraint (spineRibbon.endCntrl, self.endJnt, mo=True)
         
         #cria o moveall da espinha
         displaySetup= self.spineDict['moveallSetup'].copy()
