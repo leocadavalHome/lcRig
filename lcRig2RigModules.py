@@ -1437,3 +1437,83 @@ class Spine:
         weightAttr = cns3.target.connections(p=True, t='parentConstraint') #descobre parametros
         spineMoveall.ikfk >> weightAttr[1]
         ikfkRev.outputX >> weightAttr[0]
+
+class Chain:
+    def __init__(self, name='chain', flipAxis=False, numDiv=2, axis='X'):
+        self.axis=axis
+        self.flipAxis=flipAxis
+        self.name=name
+        self.chainGuideDict={}
+        self.numDiv=numDiv
+        
+        for i in range (self.numDiv):
+            self.chainGuideDict['guide'+str(i+1)]=[0+i,0,0]
+
+    def doGuide(self):
+        self.guideList=[]
+        for i in range(len(self.chainGuideDict.keys())):
+            guideName= name+str(i)
+            guide= pm.spaceLocator (n=guideName,p=(0,0,0))
+            self.guideList.append (guide)
+            pm.xform(guide, t=self.chainGuideDict['guide'+str(i+1)], ws=True)
+
+    def doRig(self):
+        A=[]
+        AB=[]
+        last=None
+        for obj in self.guideList:
+            p=pm.xform (obj, q=True, t=True, ws=True)
+            P=om.MVector(p)
+            A.append(P)
+            if last:
+                if flipAxis:
+                    V=last-P
+                else:    
+                    V=P-last
+                AB.append(V)
+            last=P
+
+        if self.flipAxis:
+            Z=om.MVector(0,0,1)    
+        else:
+            Z=om.MVector(0,0,-1)
+            
+        m=[ 1,0,0,0,
+            0,1,0,0,
+            0,0,1,0,
+            0,0,0,1]
+            
+        last=None
+        self.jntList=[]
+        for i in range(len(AB)): 
+            normal=AB[i]^Z  
+            m=orientMatrix(AB[i], normal, A[i], axis)
+            pm.select(cl=True)
+            jnt = pm.joint()
+            self.jntList.append(jnt)
+            pm.xform (jnt, m = m, ws=True) 
+            pm.makeIdentity (jnt, apply=True, r=1, t=0, s=1, n=0, pn=0)
+            if last:
+                pm.parent (jnt, last)
+            last=jnt
+        
+        pm.select(cl=True)
+        jnt = pm.joint()
+        self.jntList.append(jnt)
+        pm.xform (jnt, m = m, ws=True)
+        pm.xform (jnt, t=A[-1], ws=True) 
+        pm.makeIdentity (jnt, apply=True, r=1, t=0, s=1, n=0, pn=0)
+        pm.parent (jnt, last)
+        
+        cntrlTodo=[]
+        if len(self.jntList)>1:            
+            cntrlToDo=self.jntList[:-1]
+          
+        self.cntrlList=[]        
+        last=None
+        for jnt in cntrlToDo:
+            cntrl=cntrlCrv (obj=jnt, connType='parentConstraint')
+            self.cntrlList.append (cntrl)
+            if last:
+                pm.parent (cntrl.getParent(), last)
+            last=cntrl    
