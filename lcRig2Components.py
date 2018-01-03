@@ -1414,7 +1414,43 @@ class AimTwistDivider:
 
         decomposeMatrix3.outputRotate >> self.mid.rotate
         pm.pointConstraint (self.start,self.end,self.mid,mo=False)    
+
+def createSpc (driver, name):
+	drvGrp = pm.group (empty=True, n=name+'_drv')
+	if driver:
+		pm.parentConstraint (driver, drvGrp)
+	spcGrp = pm.group (empty=True, n=name+'_spc')
+	pm.parent (spcGrp, drvGrp)
         
+def addSpc (target, spaceList, switcher, type):	
+    for space in spaceList:
+    	if type=='parent':
+    		cns = pm.parentConstraint (space+'_spc', switcher, mo=True)
+    	elif type=='orient':
+    		cns =  pm.orientConstraint (space+'_spc', switcher)
+    	
+    	if target.hasAttr('spcSwitch'):
+    		enumTxt = target.spcSwitch.getEnums()
+    		connects = target.spcSwitch.connections(d=True, s=False, p=True)
+    		index = len (enumTxt.keys())
+    		enumTxt[space]=index 
+    		target.deleteAttr('spcSwitch')
+    		target.addAttr('spcSwitch', at='enum', en=enumTxt, k=True)
+    		if connects:
+    			for c in connects:
+    				target.spcSwitch >> c
+    	else:
+    		target.addAttr('spcSwitch', at='enum', en=space, k=True)
+    		index=0
+    		
+    	cond = pm.createNode ('condition', n=switcher+space+'Cond')
+    	target.spcSwitch >> cond.firstTerm
+    	cond.secondTerm.set(index)
+    	cond.operation.set(0)
+    	cond.colorIfTrueR.set(1)
+    	cond.colorIfFalseR.set(0)     
+    	cond.outColor.outColorR >> cns.attr(space+'_spcW'+str(index))
+       
 ### Ainda nao usadas       
 def composeMMatrix (vecX, vecY, vecZ, vecP ):
     list = [ vecX.x, vecX.y, vecX.z, 0, vecY.x, vecY.y, vecY.z, 0, vecZ.x, vecZ.y, vecZ.z, 0, vecP.x, vecP.y,vecP.z,1]
