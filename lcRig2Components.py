@@ -1567,8 +1567,10 @@ class RibbonBezierSimple:
         #loop pra fazer os colocar o numero escolhido de joints ao longo do ribbon.
         #cria tmb node tree pro squash/stretch
         #e controles extras 
-        vIncrement=float(1.0/((self.numJnts-2)/2.0))  
+        vIncrement=float(1.0/(self.numJnts-1))
+        print vIncrement 
         for i in range (1,self.numJnts+1):
+            print (i-1)*vIncrement
             #cria estrutura pra superficie 1
             pm.select (cl=True)
             jnt1 = pm.joint (p=(0,0,0))
