@@ -664,18 +664,10 @@ class Finger:
             if self.flipAxis:
                 AB=A-B
             else:
-                AB=B-A   
-            x = n.normal() ^ AB.normal()
-            t = x.normal() ^ n.normal()  
-              
-            if self.axis=='Y':    
-                list = [ n.normal().x, n.normal().y, n.normal().z, 0, t.x, t.y, t.z, 0, x.x, x.y, x.z, 0, A.x, A.y,A.z,1]
-            elif self.axis=='Z':
-                list = [ x.x, x.y, x.z, 0,n.normal().x, n.normal().y, n.normal().z, 0,t.x, t.y, t.z, 0, A.x, A.y,A.z,1]
-            else:
-                list = [ t.x, t.y, t.z, 0,n.normal().x, n.normal().y, n.normal().z, 0, x.x*-1, x.y*-1, x.z*-1, 0, A.x, A.y,A.z,1]
-                 
-            m= om.MMatrix (list)
+                AB=B-A  
+                           
+            m= orientMatrix(mvector=AB, normal=n, pos=A, axis=self.axis)
+            
             j1 = pm.joint()
             fingerJnts.append(j1)
             pm.xform (j1, m = m, ws=True) 
@@ -930,35 +922,15 @@ class Foot:
             CD=C-D
             
         n =BC^AB 
-        pm.select(cl=True) 
-        
-        x = n.normal() ^ AD.normal()
-        t = x.normal() ^ n.normal()  
-          
-        if self.axis=='Y':    
-            list = [ n.normal().x, n.normal().y, n.normal().z, 0, t.x, t.y, t.z, 0, x.x, x.y, x.z, 0, A.x, A.y,A.z,1]
-        elif self.axis=='Z':
-            list = [ x.x, x.y, x.z, 0,n.normal().x, n.normal().y, n.normal().z, 0,t.x, t.y, t.z, 0, A.x, A.y,A.z,1]
-        else:
-            list = [ t.x, t.y, t.z, 0,n.normal().x, n.normal().y, n.normal().z, 0, x.x*-1, x.y*-1, x.z*-1, 0, A.x, A.y,A.z,1]
-              
-        m= om.MMatrix (list)
+
+        pm.select(cl=True)               
+        m= orientMatrix(mvector=AD, normal=n, pos=A, axis=self.axis)
         j1 = pm.joint()
         pm.xform (j1, m = m, ws=True) 
         pm.makeIdentity (j1, apply=True, r=1, t=0, s=1, n=0, pn=0)
-        
-        x = n.normal() ^ CD.normal()
-        t = x.normal() ^ n.normal()  
-          
-        if self.axis=='Y':    
-            list = [ n.normal().x, n.normal().y, n.normal().z, 0, t.x, t.y, t.z, 0, x.x, x.y, x.z, 0, D.x, D.y,D.z,1]
-        elif self.axis=='Z':
-            list = [ x.x, x.y, x.z, 0,n.normal().x, n.normal().y, n.normal().z, 0,t.x, t.y, t.z, 0, D.x, D.y,D.z,1]
-        else:
-            list = [ t.x, t.y, t.z, 0,n.normal().x, n.normal().y, n.normal().z, 0, x.x*-1, x.y*-1, x.z*-1, 0, D.x, D.y,D.z,1]
-        
+                
         #cria os joints     
-        m= om.MMatrix (list)
+        m= orientMatrix(mvector=CD, normal=n, pos=D, axis=self.axis)
         j2 = pm.joint()
         pm.xform (j2, m = m, ws=True) 
         pm.makeIdentity (j2, apply=True, r=1, t=0, s=1, n=0, pn=0)
@@ -1274,18 +1246,10 @@ class Spine:
         # vai acontecer qnd usarem a guide horizontal
         if abs(dot)>.95:
             Z=om.MVector(0,1,0)
-   
-
         n=AB^Z
-        x = n.normal() ^ AB.normal()
-        t = x.normal() ^ n.normal()      
-        if self.axis=='Y':            
-            list = [ n.normal().x, n.normal().y, n.normal().z, 0, t.x, t.y, t.z, 0, x.x, x.y, x.z, 0, A.x, A.y,A.z,1]
-        elif self.axis=='Z':
-            list = [ x.x, x.y, x.z, 0,n.normal().x, n.normal().y, n.normal().z, 0,t.x, t.y, t.z, 0, A.x, A.y,A.z,1]
-        else:
-            list = [ t.x, t.y, t.z, 0,n.normal().x, n.normal().y, n.normal().z, 0, x.x*-1, x.y*-1, x.z*-1, 0, A.x, A.y,A.z,1]
-        m= om.MMatrix (list)
+
+        m= orientMatrix(mvector=AB, normal=n, pos=A, axis=self.axis)
+
         pm.xform (self.startZeroJnt, m = m, ws=True) 
         pm.xform (self.startJnt, m = m, ws=True) 
         pm.xform (self.startTipJnt, m = m, ws=True) 
@@ -1309,18 +1273,9 @@ class Spine:
         
         dot = Z.normal()*AB.normal() #se o eixo Z, usado como secundario, for quase paralelo ao vetor do Bone, troca pra eixo Y como secundario
         if abs(dot)>.95:
-            Z=om.MVector(0,1,0)
-            
+            Z=om.MVector(0,1,0)            
         n=AB^Z
-        x = n.normal() ^ AB.normal()
-        t = x.normal() ^ n.normal()      
-        if self.axis=='Y':            
-            list = [ n.normal().x, n.normal().y, n.normal().z, 0, t.x, t.y, t.z, 0, x.x, x.y, x.z, 0, A.x, A.y,A.z,1]
-        elif self.axis=='Z':
-            list = [ x.x, x.y, x.z, 0,n.normal().x, n.normal().y, n.normal().z, 0,t.x, t.y, t.z, 0, A.x, A.y,A.z,1]
-        else:
-            list = [ t.x, t.y, t.z, 0,n.normal().x, n.normal().y, n.normal().z, 0, x.x*-1, x.y*-1, x.z*-1, 0, A.x, A.y,A.z,1]
-        m= om.MMatrix (list)
+        m= orientMatrix(mvector=AB, normal=n, pos=A, axis=self.axis)
         pm.xform (self.endZeroJnt, m = m, ws=True) 
         pm.xform (self.endJnt, m = m, ws=True) 
         pm.xform (self.endTipJnt, m = m, ws=True) 
