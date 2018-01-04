@@ -1439,34 +1439,75 @@ class Spine:
         ikfkRev.outputX >> weightAttr[0]
 
 class Chain:
-    def __init__(self, name='chain', flipAxis=False, numDiv=2, axis='X'):
+    """
+        Cria uma cadeia de joints com controles fk
+        Parametros: 
+            name (string): nome do novo limb            
+            flipAxis (boolean): se o eixo eh flipado ao longo do bone
+            axis (string:'X','Y' ou 'Z'): eixo ao longo do bone
+            numDiv (int): numero de joints da cadeia
+                             
+    """  
+    ## IMPLEMENTAR:
+    #  nomes dos joints
+    #  talvez conexoes diretas dos controles?
+    #  algum tipo de controle ik para a cadeia
+        
+    def __init__(self, name='chain', flipAxis=False, numDiv=2, axis='X', **kwargs):
         self.axis=axis
         self.flipAxis=flipAxis
         self.name=name
         self.chainGuideDict={}
         self.numDiv=numDiv
-        
+        self.chainGuideMoveall=None
         for i in range (self.numDiv):
             self.chainGuideDict['guide'+str(i+1)]=[0+i,0,0]
+        #parametros de aparencia dos controles
+        self.chainDict={}
+        self.chainDict['moveAllCntrlSetup']={'nameTempl':self.name+'Moveall', 'icone':'circuloX','size':1.8,'color':(1,1,0) }    
+        self.chainDict['fkCntrlSetup'] = {'nameTempl':self.name+'Fk', 'icone':'cubo','size':.8,'color':(0,1,0) }    
 
-    def doGuide(self):
+    def doGuide(self, **kwargs):
+        self.chainGuideDict.update(kwargs)
+        
+        #apaga se existir
+        cntrlName=self.chainDict['moveAllCntrlSetup']['nameTempl']+'_guide'
+        if pm.objExists(cntrlName):
+            pm.delete (cntrlName)
+        self.chainGuideMoveall=pm.group(n=cntrlName, em=True)
+
         self.guideList=[]
         for i in range(len(self.chainGuideDict.keys())):
-            guideName= name+str(i)
+            guideName= self.name+str(i)+'_guide'
             guide= pm.spaceLocator (n=guideName,p=(0,0,0))
             self.guideList.append (guide)
             pm.xform(guide, t=self.chainGuideDict['guide'+str(i+1)], ws=True)
-
+            pm.parent(guide, self.chainGuideMoveall)
+            
     def doRig(self):
+        # se nao tiver guide faz um padrao
+        if not self.chainGuideMoveall:
+            self.doGuide()
+            
+        #apagar se ja houver um grupo moveall
+        cntrlName=self.chainDict['moveAllCntrlSetup']['nameTempl']                     
+        if pm.objExists(cntrlName):
+            pm.delete (cntrlName)
+        self.chainMoveAll = pm.group(empty=True, n=cntrlName)
+
+        
         A=[]
         AB=[]
         last=None
         for obj in self.guideList:
             p=pm.xform (obj, q=True, t=True, ws=True)
             P=om.MVector(p)
+            #guarda na lista A as posicoes dos guides como MVector
             A.append(P)
+            #calcula vetores de direcao entre os guides
+            #guarda na lista AB
             if last:
-                if flipAxis:
+                if self.flipAxis:
                     V=last-P
                 else:    
                     V=P-last
@@ -1474,9 +1515,11 @@ class Chain:
             last=P
 
         if self.flipAxis:
-            Z=om.MVector(0,0,1)    
+            Z=om.MVector(0,0,1)
+            X=om.MVector(-1,0,0)  
         else:
             Z=om.MVector(0,0,-1)
+            X=om.MVector(1,0,0)
             
         m=[ 1,0,0,0,
             0,1,0,0,
@@ -1485,9 +1528,17 @@ class Chain:
             
         last=None
         self.jntList=[]
-        for i in range(len(AB)): 
-            normal=AB[i]^Z  
-            m=orientMatrix(AB[i], normal, A[i], axis)
+        for i in range(len(AB)):
+            #se a o vetor do bone coincidir com o eixo Z usa o eixo X de secundario
+            dot=AB[i].normal()*Z
+            print dot
+            if abs(dot) < 0.95:
+                normal=AB[i]^Z
+            else:
+                normal=AB[i]^X
+            
+            # descobre a matriz de transformacao orientada e desenha os joints     
+            m=orientMatrix(AB[i], normal, A[i], self.axis)
             pm.select(cl=True)
             jnt = pm.joint()
             self.jntList.append(jnt)
@@ -1497,6 +1548,7 @@ class Chain:
                 pm.parent (jnt, last)
             last=jnt
         
+        # desenha o ultimo joint (ou o unico)
         pm.select(cl=True)
         jnt = pm.joint()
         self.jntList.append(jnt)
@@ -1505,6 +1557,9 @@ class Chain:
         pm.makeIdentity (jnt, apply=True, r=1, t=0, s=1, n=0, pn=0)
         pm.parent (jnt, last)
         
+        pm.parent (self.jntList[0], self.chainMoveAll)
+        
+        #faz controles para os joints exceto o da ponta
         cntrlTodo=[]
         if len(self.jntList)>1:            
             cntrlToDo=self.jntList[:-1]
@@ -1512,8 +1567,12 @@ class Chain:
         self.cntrlList=[]        
         last=None
         for jnt in cntrlToDo:
-            cntrl=cntrlCrv (obj=jnt, connType='parentConstraint')
+            displaySetup=self.chainDict['fkCntrlSetup'].copy()
+            cntrlName=self.chainDict['fkCntrlSetup']['nameTempl']
+            cntrl=cntrlCrv (name= cntrlName, obj=jnt, connType='parentConstraint', **displaySetup)
             self.cntrlList.append (cntrl)
             if last:
                 pm.parent (cntrl.getParent(), last)
             last=cntrl    
+            
+        pm.parent (self.cntrlList[0].getParent(), self.chainMoveAll)
