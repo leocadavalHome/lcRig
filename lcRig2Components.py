@@ -24,9 +24,7 @@ def cntrlCrv(name='cntrl', obj=None, connType=None,offsets=0, **kwargs):
     #constroi icone                            
     if icone== "cubo":
         crv = pm.curve (n=name+"_cntrl", d=1,p=[(-0.5,0.5,0.5), (-0.5,0.5,-0.5), (0.5,0.5,-0.5),(0.5,0.5,0.5),(-0.5,0.5,0.5),(0.5,0.5,0.5),(0.5,-0.5,0.5),(-0.5,-0.5,0.5),(-0.5,0.5,0.5),(-0.5,-0.5,0.5),(-0.5,-0.5,-0.5),(-0.5,0.5,-0.5),(-0.5,-0.5,-0.5),(0.5,-0.5,-0.5),(0.5,0.5,-0.5),(0.5,-0.5,-0.5),(0.5,-0.5,0.5)],k=[0,1,2,3,4 ,5,6,7,8,9,10,11,12,13,14,15,16])
-        crv.scaleX.set (cntrlSize)
-        crv.scaleY.set (cntrlSize)
-        crv.scaleZ.set (cntrlSize)
+        crv.scale.set (cntrlSize,cntrlSize,cntrlSize)
         pm.makeIdentity( crv, a = True, t = True, r = True, s = True, n=False )
     elif icone=='bola':
         crv = pm.circle (n=name+"_cntrl" , c=(0,0,0),nr=(0,1,0),sw=360,r=0.5,d=3,ut=0,ch=0)[0]
@@ -34,33 +32,235 @@ def cntrlCrv(name='cntrl', obj=None, connType=None,offsets=0, **kwargs):
         crv2 = pm.circle (c=(0,0,0),nr=(0,0,1),sw=360,r=0.5,d=3,ut=0,ch=0)[0]
         pm.parent ([crv1.getShape(),crv2.getShape()], crv, shape=True, r=True)
         pm.delete (crv1, crv2)
-        crv.scaleX.set (cntrlSize)
-        crv.scaleY.set (cntrlSize)
-        crv.scaleZ.set (cntrlSize)
+        crv.scale.set (cntrlSize,cntrlSize,cntrlSize)
         pm.makeIdentity (crv,apply=True,t=1,r=1,s=1,n=0)
     elif icone=='circuloY':
         crv = pm.circle (n=name+"_cntrl" , c=(0,0,0),nr=(0,1,0),sw=360,r=0.5,d=3,ut=0,ch=0)[0]
-        crv.scaleX.set (cntrlSize)
-        crv.scaleY.set (cntrlSize)
-        crv.scaleZ.set (cntrlSize)
+        crv.scale.set (cntrlSize,cntrlSize,cntrlSize)
         pm.makeIdentity( crv, a = True, t = True, r = True, s = True, n=False )         
     elif icone=='circuloX':
         crv = pm.circle (n=name+"_cntrl" , c=(0,0,0),nr=(1,0,0),sw=360,r=0.5,d=3,ut=0,ch=0)[0]
-        crv.scaleX.set (cntrlSize)
-        crv.scaleY.set (cntrlSize)
-        crv.scaleZ.set (cntrlSize)
+        crv.scale.set (cntrlSize,cntrlSize,cntrlSize)
         pm.makeIdentity( crv, a = True, t = True, r = True, s = True, n=False ) 
     elif icone=='circuloZ':
         crv = pm.circle (n=name+"_cntrl" , c=(0,0,0),nr=(0,0,1),sw=360,r=0.5,d=3,ut=0,ch=0)[0]
-        crv.scaleX.set (cntrlSize)
-        crv.scaleY.set (cntrlSize)
-        crv.scaleZ.set (cntrlSize)
+        crv.scale.set (cntrlSize,cntrlSize,cntrlSize)
         pm.makeIdentity( crv, a = True, t = True, r = True, s = True, n=False )
     elif icone=='seta':
         crv=pm.curve (d=1, p=((-1,0,0),(-1,0,-3),(-2,0,-3),(0,0,-5),(2,0,-3),(1,0,-3),(1,0,0)),k=[0,1,2,3,4,5,6])
         crv.scale.set(cntrlSize,cntrlSize,cntrlSize) 
+        pm.makeIdentity( crv, a = True, t = True, r = True, s = True, n=False ) 
+    elif icone == 'circleX':
+    	controlList = pm.circle(ch=1, n=name+"_cntrl")
+    	crv = controlList[0]
+    	controlHist = controlList[1]
+    	controlHist.normalZ.set(0)
+    	controlHist.normalX.set(1)
+    	crv.scale.set(cntrlSize,cntrlSize,cntrlSize) 
         pm.makeIdentity( crv, a = True, t = True, r = True, s = True, n=False )
-        
+    elif icone == 'circleY':
+    	controlList = pm.circle(ch=1, n=name+"_cntrl")
+    	crv = controlList[0]
+    	controlHist = controlList[1]
+    	controlHist.normalZ.set(0)
+    	controlHist.normalY.set(1)
+    	crv.scale.set(cntrlSize,cntrlSize,cntrlSize) 
+        pm.makeIdentity( crv, a = True, t = True, r = True, s = True, n=False ) 
+    elif icone == 'circleZ':
+    	crv = pm.circle(ch=0, n=name+"_cntrl")[0]
+    	crv.scale.set(cntrlSize,cntrlSize,cntrlSize) 
+        pm.makeIdentity( crv, a = True, t = True, r = True, s = True, n=False )   
+    elif icone == 'squareX':
+    	crv = pm.curve(p=((1,0,-1), (1,0,1), (-1,0,1), (-1,0,-1), (1,0,-1)), d=1, n=name+"_cntrl")
+    	crv.rotateZ.set(90)
+    	crv.scale.set(cntrlSize,cntrlSize,cntrlSize) 
+        pm.makeIdentity( crv, a = True, t = True, r = True, s = True, n=False )   
+    elif icone == 'squareY':
+    	crv = pm.curve(p=((1,0,-1), (1,0,1), (-1,0,1), (-1,0,-1), (1,0,-1)), d=1, n=name+"_cntrl")
+    	crv.scale.set(cntrlSize,cntrlSize,cntrlSize) 
+        pm.makeIdentity( crv, a = True, t = True, r = True, s = True, n=False )
+    
+    elif icone == 'squareZ':
+    	crv = pm.curve(p=((1,0,-1), (1,0,1), (-1,0,1), (-1,0,-1), (1,0,-1)), d=1, n=name+"_cntrl")
+    	crv.rotateX.set(90)
+    	crv.scale.set(cntrlSize,cntrlSize,cntrlSize) 
+        pm.makeIdentity( crv, a = True, t = True, r = True, s = True, n=False )
+    
+    elif icone == 'cube':
+    	crv = pm.curve(p=((1,-1,1), (1,-1,-1), (-1,-1,-1), (-1,-1,1), (1,-1,1), (1,1,1), (1,1,-1), (1,-1,-1), (-1,-1,-1), (-1,1,-1),
+    	(1,1,-1), (1,1,1), (-1,1,1), (-1,1,-1), (-1,-1,-1), (-1,-1,1), (-1,1,1)), d=1, n=name+"_cntrl")
+    	crv.scale.set(cntrlSize,cntrlSize,cntrlSize) 
+        pm.makeIdentity( crv, a = True, t = True, r = True, s = True, n=False )
+    
+    elif icone == 'hexagonX':
+    	controlList = pm.circle(ch=1, n=name+"_cntrl")
+    	crv = controlList[0]
+    	history = controlList[1]
+    	history.degree.set(1)
+    	history.sections.set(6)
+    	history.normalZ.set(0)
+    	history.normalX.set(1)
+    	pm.delete(crv, ch=True)
+    	crv.scale.set(cntrlSize,cntrlSize,cntrlSize) 
+        pm.makeIdentity( crv, a = True, t = True, r = True, s = True, n=False )
+    
+    elif icone == 'hexagonY':
+    	controlList = pm.circle(ch=1, n=name+"_cntrl")
+    	crv = controlList[0]
+    	history = controlList[1]
+    	history.degree.set(1)
+    	history.sections.set(6)
+    	history.normalZ.set(0)
+    	history.normalY.set(1)
+    	pm.delete(crv, ch=True)
+    	crv.scale.set(cntrlSize,cntrlSize,cntrlSize) 
+        pm.makeIdentity( crv, a = True, t = True, r = True, s = True, n=False )
+    
+    elif icone == 'hexagonZ':
+    	controlList = pm.circle(ch=1, n=name+"_cntrl")
+    	crv = controlList[0]
+    	history = controlList[1]
+    	history.degree.set(1)
+    	history.sections.set(6)
+    	pm.delete(crv, ch=True)
+    	crv.scale.set(cntrlSize,cntrlSize,cntrlSize) 
+        pm.makeIdentity( crv, a = True, t = True, r = True, s = True, n=False )
+    
+    elif icone == 'pentagonX':
+    	controlList = pm.circle(ch=1, n=name+"_cntrl")
+    	crv = controlList[0]
+    	history = controlList[1]
+    	history.degree.set(1)
+    	history.sections.set(5)
+    	history.normalZ.set(0)
+    	history.normalX.set(1)
+    	pm.delete(crv, ch=True)
+    	crv.scale.set(cntrlSize,cntrlSize,cntrlSize) 
+        pm.makeIdentity( crv, a = True, t = True, r = True, s = True, n=False )
+    
+    elif icone == 'pentagonY':
+    	controlList = pm.circle(ch=1, n=name+"_cntrl")
+    	crv = controlList[0]
+    	history = controlList[1]
+    	history.degree.set(1)
+    	history.sections.set(5)
+    	history.normalZ.set(0)
+    	history.normalY.set(1)
+    	pm.delete(crv, ch=True)
+    	crv.scale.set(cntrlSize,cntrlSize,cntrlSize) 
+        pm.makeIdentity( crv, a = True, t = True, r = True, s = True, n=False )
+    
+    elif icone == 'pentagonZ':
+    	controlList = pm.circle(ch=1, n=name+"_cntrl")
+    	crv = controlList[0]
+    	history = controlList[1]
+    	history.degree.set(1)
+    	history.sections.set(5)
+    	pm.delete(crv, ch=True)
+    	crv.scale.set(cntrlSize,cntrlSize,cntrlSize) 
+        pm.makeIdentity( crv, a = True, t = True, r = True, s = True, n=False )
+    
+    elif icone == 'crossX':
+    	crv = pm.curve(p=((1,0,-1), (1,0,-2), (-1,0,-2), (-1,0,-1), (-2,0,-1), (-2,0,1), (-1,0,1), (-1,0,2), (1,0,2), (1,0,1),
+    	(2,0,1), (2,0,-1), (1,0,-1)), d=1, n=name+"_cntrl")
+    	crv.rotateZ.set(90)
+    	crv.scale.set(cntrlSize,cntrlSize,cntrlSize) 
+        pm.makeIdentity( crv, a = True, t = True, r = True, s = True, n=False )
+    
+    elif icone == 'crossY':
+    	crv = pm.curve(p=((1,0,-1), (1,0,-2), (-1,0,-2), (-1,0,-1), (-2,0,-1), (-2,0,1), (-1,0,1), (-1,0,2), (1,0,2), (1,0,1),
+    	(2,0,1), (2,0,-1), (1,0,-1)), d=1, n=name+"_cntrl")
+    	crv.scale.set(cntrlSize,cntrlSize,cntrlSize) 
+        pm.makeIdentity( crv, a = True, t = True, r = True, s = True, n=False )
+    
+    elif icone == 'crossZ':
+    	crv = pm.curve(p=((1,0,-1), (1,0,-2), (-1,0,-2), (-1,0,-1), (-2,0,-1), (-2,0,1), (-1,0,1), (-1,0,2), (1,0,2), (1,0,1),
+    	(2,0,1), (2,0,-1), (1,0,-1)), d=1, n=name+"_cntrl")
+    	crv.rotateX.set(90)
+    	crv.scale.set(cntrlSize,cntrlSize,cntrlSize) 
+        pm.makeIdentity( crv, a = True, t = True, r = True, s = True, n=False )
+    
+    
+    elif icone == 'fkShapeX':
+    	crv = pm.curve(p=((0,1,1), (0,-1,1), (2.903, -0.47, 0.522), (2.903, 0.573, 0.522), (0,1,1), (0,1,-1), (0,-1,-1), (0,-1,1), (0,1,1), 
+    	(2.903, 0.573, 0.522), (2.903, 0.573, -0.522), (0,1,-1), (0,-1,-1), (2.903, -0.47, -0.522), (2.903, -0.47, 0.522), (0,-1,1), (0,-1,-1),
+    	(2.903, -0.47, -0.522), (2.903, 0.573, -0.522)), d=1, n=name+"_cntrl")
+    	crv.scale.set(cntrlSize,cntrlSize,cntrlSize) 
+        pm.makeIdentity( crv, a = True, t = True, r = True, s = True, n=False )
+    
+    elif icone == 'fkShapeY':
+    	crv = pm.curve(p=((0,1,1), (0,-1,1), (2.903, -0.47, 0.522), (2.903, 0.573, 0.522), (0,1,1), (0,1,-1), (0,-1,-1), (0,-1,1), (0,1,1), 
+    	(2.903, 0.573, 0.522), (2.903, 0.573, -0.522), (0,1,-1), (0,-1,-1), (2.903, -0.47, -0.522), (2.903, -0.47, 0.522), (0,-1,1), (0,-1,-1),
+    	(2.903, -0.47, -0.522), (2.903, 0.573, -0.522)), d=1, n=name+"_cntrl")
+    	crv.rotateZ.set(90)
+    	crv.scale.set(cntrlSize,cntrlSize,cntrlSize) 
+        pm.makeIdentity( crv, a = True, t = True, r = True, s = True, n=False )
+    
+    elif icone == 'fkShapeZ':
+    	crv = pm.curve(p=((0,1,1), (0,-1,1), (2.903, -0.47, 0.522), (2.903, 0.573, 0.522), (0,1,1), (0,1,-1), (0,-1,-1), (0,-1,1), (0,1,1), 
+    	(2.903, 0.573, 0.522), (2.903, 0.573, -0.522), (0,1,-1), (0,-1,-1), (2.903, -0.47, -0.522), (2.903, -0.47, 0.522), (0,-1,1), (0,-1,-1),
+    	(2.903, -0.47, -0.522), (2.903, 0.573, -0.522)), d=1, n=name+"_cntrl")
+    	crv.rotateY.set(-90)
+    	crv.scale.set(cntrlSize,cntrlSize,cntrlSize) 
+        pm.makeIdentity( crv, a = True, t = True, r = True, s = True, n=False )
+    
+    elif icone == 'fkShapeMinusX':
+    	crv = pm.curve(p=((0,1,1), (0,-1,1), (2.903, -0.47, 0.522), (2.903, 0.573, 0.522), (0,1,1), (0,1,-1), (0,-1,-1), (0,-1,1), (0,1,1), 
+    	(2.903, 0.573, 0.522), (2.903, 0.573, -0.522), (0,1,-1), (0,-1,-1), (2.903, -0.47, -0.522), (2.903, -0.47, 0.522), (0,-1,1), (0,-1,-1),
+    	(2.903, -0.47, -0.522), (2.903, 0.573, -0.522)), d=1, n=name+"_cntrl")
+    	crv.scale.set(cntrlSize,cntrlSize,cntrlSize) 
+    	crv.rotateZ.set(180)
+        pm.makeIdentity( crv, a = True, t = True, r = True, s = True, n=False )    
+    elif icone == 'fkShapeMinusY':
+    	crv = pm.curve(p=((0,1,1), (0,-1,1), (2.903, -0.47, 0.522), (2.903, 0.573, 0.522), (0,1,1), (0,1,-1), (0,-1,-1), (0,-1,1), (0,1,1), 
+    	(2.903, 0.573, 0.522), (2.903, 0.573, -0.522), (0,1,-1), (0,-1,-1), (2.903, -0.47, -0.522), (2.903, -0.47, 0.522), (0,-1,1), (0,-1,-1),
+    	(2.903, -0.47, -0.522), (2.903, 0.573, -0.522)), d=1, n=name+"_cntrl")
+    	crv.rotateZ.set(90)
+    	crv.scale.set(cntrlSize,cntrlSize,cntrlSize) 
+    	crv.rotateX.set(180)
+        pm.makeIdentity( crv, a = True, t = True, r = True, s = True, n=False )    
+    elif icone == 'fkShapeMinusZ':
+    	crv = pm.curve(p=((0,1,1), (0,-1,1), (2.903, -0.47, 0.522), (2.903, 0.573, 0.522), (0,1,1), (0,1,-1), (0,-1,-1), (0,-1,1), (0,1,1), 
+    	(2.903, 0.573, 0.522), (2.903, 0.573, -0.522), (0,1,-1), (0,-1,-1), (2.903, -0.47, -0.522), (2.903, -0.47, 0.522), (0,-1,1), (0,-1,-1),
+    	(2.903, -0.47, -0.522), (2.903, 0.573, -0.522)), d=1, n=name+"_cntrl")
+    	crv.rotateY.set(-90)
+    	crv.scale.set(cntrlSize,cntrlSize,cntrlSize)
+    	crv.rotateX.set(180)
+        pm.makeIdentity( crv, a = True, t = True, r = True, s = True, n=False )    
+    elif icone == 'guideDirectionShapeX':
+    	crv = pm.curve(p=((-1,-1,1), (1,-1,1), (1,-1,-1), (-1,-1,-1), (-1,-1,1), (-1,1,1), (-1,1,-1), (-1,-1,-1), (-1,-1,1), 
+    	(-1,1,1), (1,1,1), (1,-1,1), (1,-1,-1), (1,1,-1), (1,1,1), (-1,1,1), (-1,1,-1),
+    	(1,1,-1), (0,2.5,0), (1,1,1), (-1,1,1), (0,2.5,0), (-1,1,-1)), d=1, n=name+"_cntrl")
+    	crv.rotateZ.set(-90)
+    	crv.scale.set(cntrlSize,cntrlSize,cntrlSize) 
+        pm.makeIdentity( crv, a = True, t = True, r = True, s = True, n=False )    
+    elif icone == 'guideDirectionShapeY':
+    	crv = pm.curve(p=((-1,-1,1), (1,-1,1), (1,-1,-1), (-1,-1,-1), (-1,-1,1), (-1,1,1), (-1,1,-1), (-1,-1,-1), (-1,-1,1), 
+    	(-1,1,1), (1,1,1), (1,-1,1), (1,-1,-1), (1,1,-1), (1,1,1), (-1,1,1), (-1,1,-1),
+    	(1,1,-1), (0,2.5,0), (1,1,1), (-1,1,1), (0,2.5,0), (-1,1,-1)), d=1, n=name+"_cntrl")
+    	crv.scale.set(cntrlSize,cntrlSize,cntrlSize) 
+        pm.makeIdentity( crv, a = True, t = True, r = True, s = True, n=False )    
+    elif icone == 'guideDirectionShapeZ':
+    	crv = pm.curve(p=((-1,-1,1), (1,-1,1), (1,-1,-1), (-1,-1,-1), (-1,-1,1), (-1,1,1), (-1,1,-1), (-1,-1,-1), (-1,-1,1), 
+    	(-1,1,1), (1,1,1), (1,-1,1), (1,-1,-1), (1,1,-1), (1,1,1), (-1,1,1), (-1,1,-1),
+    	(1,1,-1), (0,2.5,0), (1,1,1), (-1,1,1), (0,2.5,0), (-1,1,-1)), d=1, n=name+"_cntrl")
+    	crv.rotateX.set(90)
+    	crv.scale.set(cntrlSize,cntrlSize,cntrlSize) 
+        pm.makeIdentity( crv, a = True, t = True, r = True, s = True, n=False )    
+    elif icone == 'arrowX':
+    	crv = pm.curve(p=((0,4,0), (-2,2,0), (-1,2,0), (-1,-2,0), (1,-2,0), (1,2,0), (2,2,0), (0,4,0)), d=1, n=name+"_cntrl")
+    	crv.rotateZ.set(-90)
+    	crv.scale.set(cntrlSize,cntrlSize,cntrlSize) 
+        pm.makeIdentity( crv, a = True, t = True, r = True, s = True, n=False )    
+    elif icone == 'arrowY':
+    	crv = pm.curve(p=((0,4,0), (-2,2,0), (-1,2,0), (-1,-2,0), (1,-2,0), (1,2,0), (2,2,0), (0,4,0)), d=1, n=name+"_cntrl")	
+    	crv.scale.set(cntrlSize,cntrlSize,cntrlSize) 
+        pm.makeIdentity( crv, a = True, t = True, r = True, s = True, n=False )    
+    elif icone == 'arrowZ':
+    	crv = pm.curve(p=((0,4,0), (-2,2,0), (-1,2,0), (-1,-2,0), (1,-2,0), (1,2,0), (2,2,0), (0,4,0)), d=1, n=name+"_cntrl")
+    	crv.rotateX.set(90)
+    	crv.scale.set(cntrlSize,cntrlSize,cntrlSize) 
+        pm.makeIdentity( crv, a = True, t = True, r = True, s = True, n=False )            
     elif icone=='grp':
         crv = pm.group (em=True)
         
@@ -94,12 +294,160 @@ def cntrlCrv(name='cntrl', obj=None, connType=None,offsets=0, **kwargs):
         
         if connType=='parent':
             cntrlledObj.setParent (crv)
+        
         elif connType=='parentConstraint':
             cnstr = pm.parentConstraint (crv, cntrlledObj, mo=True)
+        
         elif connType=='orientConstraint':
             cnstr = pm.orientConstraint (crv, cntrlledObj, mo=True)                  
+    	
+    	elif connType == 'constraint':
+    		cnstr = pm.parentConstraint(crv, cntrlledObj, mo=1)
+    		scaleConst = pm.scaleConstraint(crv, cntrlledObj, mo=1)    		   	
+    	
+    	elif connType == 'pointConstraint':
+    		cnstr = pm.pointConstraint(crv, cntrlledObj, mo=1)
+        
+    	elif connType == 'scaleConstraint':
+    		cnstr = pm.scaleConstraint(crv, cntrlledObj, mo=1)
+    
+    	elif connType == 'pointAndOrientConstraint':
+    		cnstr = pm.pointConstraint(crv, cntrlledObj, mo=1)
+    		cnstr = pm.orientConstraint(crv, cntrlledObj, mo=1)
+    
+    	elif connType == 'pointAndScaleConstraint':
+    		cnstr = pm.pointConstraint(crv, cntrlledObj, mo=1)
+    		cnstr = pm.scaleConstraint(crv, cntrlledObj, mo=1)
+    
+    	elif connType == 'orientAndScaleConstraint':
+    		cnstr = pm.orientConstraint(crv, cntrlledObj, mo=1)
+    		cnstr = pm.scaleConstraint(crv, cntrlledObj, mo=1)
+    
+    	elif connType == 'connection':
+    		crv.tx >> cntrlledObj.tx
+    		crv.ty >> cntrlledObj.ty
+    		crv.tz >> cntrlledObj.tz
+    		crv.rx >> cntrlledObj.rx
+    		crv.ry >> cntrlledObj.ry
+    		crv.rz >> cntrlledObj.rz
+    		crv.sx >> cntrlledObj.sx
+    		crv.sy >> cntrlledObj.sy
+    		crv.sz >> cntrlledObj.sz
+    
+    	elif connType == 'connectionT':
+    		crv.tx >> cntrlledObj.tx
+    		crv.ty >> cntrlledObj.ty
+    		crv.tz >> cntrlledObj.tz
+    
+    	elif connType == 'connectionR':
+    		crv.rx >> cntrlledObj.rx
+    		crv.ry >> cntrlledObj.ry
+    		crv.rz >> cntrlledObj.rz
+    
+    	elif connType == 'connectionS':
+    		crv.sx >> cntrlledObj.sx
+    		crv.sy >> cntrlledObj.sy
+    		crv.sz >> cntrlledObj.sz
+    
+    	elif connType == 'connectionTR':
+    		crv.tx >> cntrlledObj.tx
+    		crv.ty >> cntrlledObj.ty
+    		crv.tz >> cntrlledObj.tz
+    		crv.rx >> cntrlledObj.rx
+    		crv.ry >> cntrlledObj.ry
+    		crv.rz >> cntrlledObj.rz
+    
+    	elif connType == 'connectionTS':
+    		crv.tx >> cntrlledObj.tx
+    		crv.ty >> cntrlledObj.ty
+    		crv.tz >> cntrlledObj.tz
+    		crv.sx >> cntrlledObj.sx
+    		crv.sy >> cntrlledObj.sy
+    		crv.sz >> cntrlledObj.sz
+    
+    	elif connType == 'connectionRS':
+    		crv.rx >> cntrlledObj.rx
+    		crv.ry >> cntrlledObj.ry
+    		crv.rz >> cntrlledObj.rz
+    		crv.sx >> cntrlledObj.sx
+    		crv.sy >> cntrlledObj.sy
+    		crv.sz >> cntrlledObj.sz
+       
+    	elif connType == 'none':
+    		pass
     
     return (crv)
+
+def createSpc (driver, name):
+	drvGrp = pm.group (empty=True, n=name+'_drv')
+	if driver:
+		pm.parentConstraint (driver, drvGrp)
+	spcGrp = pm.group (empty=True, n=name+'_spc')
+	pm.parent (spcGrp, drvGrp)
+        
+def addSpc (target, spaceList, switcher, type):	
+    for space in spaceList:
+    	if type=='parent':
+    		cns = pm.parentConstraint (space+'_spc', switcher, mo=True)
+    	elif type=='orient':
+    		cns =  pm.orientConstraint (space+'_spc', switcher)
+    	
+    	if target.hasAttr('spcSwitch'):
+    		enumTxt = target.spcSwitch.getEnums()
+    		connects = target.spcSwitch.connections(d=True, s=False, p=True)
+    		index = len (enumTxt.keys())
+    		enumTxt[space]=index 
+    		target.deleteAttr('spcSwitch')
+    		target.addAttr('spcSwitch', at='enum', en=enumTxt, k=True)
+    		if connects:
+    			for c in connects:
+    				target.spcSwitch >> c
+    	else:
+    		target.addAttr('spcSwitch', at='enum', en=space, k=True)
+    		index=0
+    		
+    	cond = pm.createNode ('condition', n=switcher+space+'Cond')
+    	target.spcSwitch >> cond.firstTerm
+    	cond.secondTerm.set(index)
+    	cond.operation.set(0)
+    	cond.colorIfTrueR.set(1)
+    	cond.colorIfFalseR.set(0)     
+    	cond.outColor.outColorR >> cns.attr(space+'_spcW'+str(index))
+
+def orientMatrix(mvector, normal, pos, axis): 
+    #criando a matriz do conforme a orientacao dada pela direcao AB, pela normal e na posicao pos               
+    AB=mvector
+    nNormal=normal.normal()
+    A=pos   
+    x = nNormal ^ AB.normal()
+    t = x.normal() ^ nNormal  
+          
+    if axis=='Y':        
+        list = [ nNormal.x, nNormal.y, nNormal.z, 0, t.x, t.y, t.z, 0, x.x, x.y, x.z, 0, A.x, A.y,A.z,1]
+    elif axis=='Z':
+        list = [ x.x, x.y, x.z, 0,nNormal.x, nNormal.y, nNormal.z, 0,t.x, t.y, t.z, 0, A.x, A.y,A.z,1]
+    else:
+        list = [ t.x, t.y, t.z, 0,nNormal.x, nNormal.y, nNormal.z, 0, x.x*-1, x.y*-1, x.z*-1, 0, A.x, A.y,A.z,1]                 
+    m=om.MMatrix (list)
+    return m
+      
+### Ainda nao usadas       
+def composeMMatrix (vecX, vecY, vecZ, vecP ):
+    list = [ vecX.x, vecX.y, vecX.z, 0, vecY.x, vecY.y, vecY.z, 0, vecZ.x, vecZ.y, vecZ.z, 0, vecP.x, vecP.y,vecP.z,1]
+    m= om.MMatrix (list)
+    return m
+
+def makeJoint(name='joint', matrix=None, obj=None, connectToLast=False):
+    if not connectToLast:
+        pm.select (cl=True)            
+    jnt= pm.joint(n=name)
+    if obj:
+        pm.xform (obj, m = m, q=True, ws=True)
+        pm.xform (jnt, m = m, ws=True)
+    if matrix:        
+        pm.xform (jnt, m = m, ws=True) 
+    pm.makeIdentity (jnt, apply=True, r=1, t=0, s=0, n=0, pn=0)
+    return jnt       
         
         
 class twistExtractor:
@@ -1415,56 +1763,3 @@ class AimTwistDivider:
         decomposeMatrix3.outputRotate >> self.mid.rotate
         pm.pointConstraint (self.start,self.end,self.mid,mo=False)    
 
-def createSpc (driver, name):
-	drvGrp = pm.group (empty=True, n=name+'_drv')
-	if driver:
-		pm.parentConstraint (driver, drvGrp)
-	spcGrp = pm.group (empty=True, n=name+'_spc')
-	pm.parent (spcGrp, drvGrp)
-        
-def addSpc (target, spaceList, switcher, type):	
-    for space in spaceList:
-    	if type=='parent':
-    		cns = pm.parentConstraint (space+'_spc', switcher, mo=True)
-    	elif type=='orient':
-    		cns =  pm.orientConstraint (space+'_spc', switcher)
-    	
-    	if target.hasAttr('spcSwitch'):
-    		enumTxt = target.spcSwitch.getEnums()
-    		connects = target.spcSwitch.connections(d=True, s=False, p=True)
-    		index = len (enumTxt.keys())
-    		enumTxt[space]=index 
-    		target.deleteAttr('spcSwitch')
-    		target.addAttr('spcSwitch', at='enum', en=enumTxt, k=True)
-    		if connects:
-    			for c in connects:
-    				target.spcSwitch >> c
-    	else:
-    		target.addAttr('spcSwitch', at='enum', en=space, k=True)
-    		index=0
-    		
-    	cond = pm.createNode ('condition', n=switcher+space+'Cond')
-    	target.spcSwitch >> cond.firstTerm
-    	cond.secondTerm.set(index)
-    	cond.operation.set(0)
-    	cond.colorIfTrueR.set(1)
-    	cond.colorIfFalseR.set(0)     
-    	cond.outColor.outColorR >> cns.attr(space+'_spcW'+str(index))
-       
-### Ainda nao usadas       
-def composeMMatrix (vecX, vecY, vecZ, vecP ):
-    list = [ vecX.x, vecX.y, vecX.z, 0, vecY.x, vecY.y, vecY.z, 0, vecZ.x, vecZ.y, vecZ.z, 0, vecP.x, vecP.y,vecP.z,1]
-    m= om.MMatrix (list)
-    return m
-
-def makeJoint(name='joint', matrix=None, obj=None, connectToLast=False):
-    if not connectToLast:
-        pm.select (cl=True)            
-    jnt= pm.joint(n=name)
-    if obj:
-        pm.xform (obj, m = m, q=True, ws=True)
-        pm.xform (jnt, m = m, ws=True)
-    if matrix:        
-        pm.xform (jnt, m = m, ws=True) 
-    pm.makeIdentity (jnt, apply=True, r=1, t=0, s=0, n=0, pn=0)
-    return jnt       

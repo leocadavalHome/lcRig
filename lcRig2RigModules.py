@@ -59,6 +59,8 @@ class Limb():
         self.limbDict['nameConventions'] = None
         ##IMPLEMENTAR padroes de nome 
 
+
+
     def doGuide(self,**kwargs): 
         self.limbGuideDict.update(kwargs)
          ## cria guia se não existir  
@@ -129,22 +131,9 @@ class Limb():
             CD = D-C
             
         n = BC^AB
-        nNormal = n.normal()
-                
+        
+        m = orientMatrix (mvector=AB,normal=n,pos=A, axis=self.axis)            
         #cria joint1
-        #criando a matriz do joint conforme a orientacao setada
-        x = nNormal ^ AB.normal()
-        t = x.normal() ^ nNormal  
-              
-        if self.axis=='Y':
-            
-            list = [ nNormal.x, nNormal.y, nNormal.z, 0, t.x, t.y, t.z, 0, x.x, x.y, x.z, 0, A.x, A.y,A.z,1]
-        elif self.axis=='Z':
-            list = [ x.x, x.y, x.z, 0,nNormal.x, nNormal.y, nNormal.z, 0,t.x, t.y, t.z, 0, A.x, A.y,A.z,1]
-        else:
-            list = [ t.x, t.y, t.z, 0,nNormal.x, nNormal.y, nNormal.z, 0, x.x*-1, x.y*-1, x.z*-1, 0, A.x, A.y,A.z,1]
-                 
-        m= om.MMatrix (list)
         pm.select(cl=True)
         self.startJnt = pm.joint()
         pm.xform (self.startJnt, m = m, ws=True) 
@@ -152,16 +141,7 @@ class Limb():
         
         #cria joint2
         #criando a matriz do joint conforme a orientacao setada
-        x = nNormal ^ BC.normal()
-        t = x.normal() ^ nNormal
-        if self.axis=='Y':
-            list = [ nNormal.x, nNormal.y, nNormal.z,0,t.x, t.y, t.z, 0, x.x, x.y, x.z, 0, B.x, B.y, B.z,1]
-        elif self.axis =='Z':
-            list = [ x.x, x.y, x.z, 0,nNormal.x, nNormal.y, nNormal.z, 0,t.x, t.y, t.z, 0, B.x, B.y, B.z,1]
-        else:   
-            list = [ t.x, t.y, t.z, 0, nNormal.x, nNormal.y, nNormal.z, 0 , x.x*-1, x.y*-1, x.z*-1, 0, B.x, B.y, B.z,1]  
-               
-        m= om.MMatrix (list)
+        m = orientMatrix (mvector=BC,normal=n,pos=B, axis=self.axis)  
         pm.select(cl=True)
         self.midJnt= pm.joint()
         pm.xform (self.midJnt, m = m, ws=True) 
@@ -183,23 +163,22 @@ class Limb():
         ##joint4(hand) se estiver setado nas opcoes      
         if self.handJoint:
             #joint4
-            #criando a matriz do joint conforme a orientacao setada            
+            # Faz a orientacao do ultimo bone independente da normal do braco
+            # Se o cotovelo estiver para frente inverte a normal
+            # limitacao: se o limb for criado no eixo Z o calculo nao eh preciso                     
             if self.flipAxis:
-                if nNormal.y < 0:
-                    nNormal=om.MVector((0,-1,0))
+                if n.y<0:
+                    Z=om.MVector(0,0,1)
                 else:
-                    nNormal=om.MVector((0,1,0))
-                        
-            x = nNormal ^ CD.normal()
-            t = x.normal() ^ nNormal
-            if self.axis=='Y':
-                list = [ nNormal.x, nNormal.y, nNormal.z, 0, t.x, t.y, t.z, 0, x.x, x.y, x.z, 0, C.x, C.y,C.z,1]
-            elif self.axis=='Z':
-                list = [ x.x, x.y, x.z, 0,nNormal.x, nNormal.y, nNormal.z, 0,t.x, t.y, t.z, 0, C.x, C.y,C.z,1]
+                    Z=om.MVector(0,0,-1)
             else:
-                list = [ t.x, t.y, t.z, 0,nNormal.x, nNormal.y, nNormal.z, 0, x.x*-1, x.y*-1, x.z*-1, 0, C.x, C.y,C.z,1]
-          
-            m= om.MMatrix (list)
+                if n.y>0:
+                    Z=om.MVector(0,0,-1)
+                else:
+                    Z=om.MVector(0,0,1)    
+            n=CD^Z            
+           
+            m = orientMatrix (mvector=CD,normal=n,pos=C, axis=self.axis)              
             pm.select(cl=True)
             self.handJnt= pm.joint()
             pm.xform (self.handJnt, m = m, ws=True) 
@@ -242,9 +221,22 @@ class Limb():
         
         ##Estrutura IK
         ikH = pm.ikHandle (sj=self.startJnt, ee=self.endJnt, sol="ikRPsolver")
+
         displaySetup=self.limbDict['ikCntrlSetup'].copy()
         cntrlName = displaySetup['nameTempl']
-        ikCntrl = cntrlCrv(name = cntrlName, obj=self.handJnt,**displaySetup)
+        ikCntrl = cntrlCrv(name = cntrlName, obj=ikH[0],**displaySetup)
+        
+        #orienta o controle ik de modo a ter aproximadamente a orientacao do eixo global
+        #mas aponta o eixo X para a ponta do ultimo bone               
+        mat=pm.xform (ikCntrl.getParent(), q=True, m=True, ws=True)
+        matrix= om.MMatrix (mat)
+        Zcomponent = om.MVector (0,0,-1)
+        Zaxis = matrix * Zcomponent
+        normal = CD^Zaxis
+
+        #CD eh o vetor de direcao do ultimo joint                
+        ori = orientMatrix(CD, normal, C, self.axis)       
+        pm.xform (ikCntrl.getParent(), m=ori, ws=True)
         ikH[0].setParent(ikCntrl)
         ikCntrl.addAttr ('pin', at='float',min=0, max=1,dv=0, k=1)
         ikCntrl.addAttr ('bias', at='float',min=-0.9, max=0.9, k=1)
@@ -672,18 +664,10 @@ class Finger:
             if self.flipAxis:
                 AB=A-B
             else:
-                AB=B-A   
-            x = n.normal() ^ AB.normal()
-            t = x.normal() ^ n.normal()  
-              
-            if self.axis=='Y':    
-                list = [ n.normal().x, n.normal().y, n.normal().z, 0, t.x, t.y, t.z, 0, x.x, x.y, x.z, 0, A.x, A.y,A.z,1]
-            elif self.axis=='Z':
-                list = [ x.x, x.y, x.z, 0,n.normal().x, n.normal().y, n.normal().z, 0,t.x, t.y, t.z, 0, A.x, A.y,A.z,1]
-            else:
-                list = [ t.x, t.y, t.z, 0,n.normal().x, n.normal().y, n.normal().z, 0, x.x*-1, x.y*-1, x.z*-1, 0, A.x, A.y,A.z,1]
-                 
-            m= om.MMatrix (list)
+                AB=B-A  
+                           
+            m= orientMatrix(mvector=AB, normal=n, pos=A, axis=self.axis)
+            
             j1 = pm.joint()
             fingerJnts.append(j1)
             pm.xform (j1, m = m, ws=True) 
@@ -938,35 +922,15 @@ class Foot:
             CD=C-D
             
         n =BC^AB 
-        pm.select(cl=True) 
-        
-        x = n.normal() ^ AD.normal()
-        t = x.normal() ^ n.normal()  
-          
-        if self.axis=='Y':    
-            list = [ n.normal().x, n.normal().y, n.normal().z, 0, t.x, t.y, t.z, 0, x.x, x.y, x.z, 0, A.x, A.y,A.z,1]
-        elif self.axis=='Z':
-            list = [ x.x, x.y, x.z, 0,n.normal().x, n.normal().y, n.normal().z, 0,t.x, t.y, t.z, 0, A.x, A.y,A.z,1]
-        else:
-            list = [ t.x, t.y, t.z, 0,n.normal().x, n.normal().y, n.normal().z, 0, x.x*-1, x.y*-1, x.z*-1, 0, A.x, A.y,A.z,1]
-              
-        m= om.MMatrix (list)
+
+        pm.select(cl=True)               
+        m= orientMatrix(mvector=AD, normal=n, pos=A, axis=self.axis)
         j1 = pm.joint()
         pm.xform (j1, m = m, ws=True) 
         pm.makeIdentity (j1, apply=True, r=1, t=0, s=1, n=0, pn=0)
-        
-        x = n.normal() ^ CD.normal()
-        t = x.normal() ^ n.normal()  
-          
-        if self.axis=='Y':    
-            list = [ n.normal().x, n.normal().y, n.normal().z, 0, t.x, t.y, t.z, 0, x.x, x.y, x.z, 0, D.x, D.y,D.z,1]
-        elif self.axis=='Z':
-            list = [ x.x, x.y, x.z, 0,n.normal().x, n.normal().y, n.normal().z, 0,t.x, t.y, t.z, 0, D.x, D.y,D.z,1]
-        else:
-            list = [ t.x, t.y, t.z, 0,n.normal().x, n.normal().y, n.normal().z, 0, x.x*-1, x.y*-1, x.z*-1, 0, D.x, D.y,D.z,1]
-        
+                
         #cria os joints     
-        m= om.MMatrix (list)
+        m= orientMatrix(mvector=CD, normal=n, pos=D, axis=self.axis)
         j2 = pm.joint()
         pm.xform (j2, m = m, ws=True) 
         pm.makeIdentity (j2, apply=True, r=1, t=0, s=1, n=0, pn=0)
@@ -1282,18 +1246,10 @@ class Spine:
         # vai acontecer qnd usarem a guide horizontal
         if abs(dot)>.95:
             Z=om.MVector(0,1,0)
-   
-
         n=AB^Z
-        x = n.normal() ^ AB.normal()
-        t = x.normal() ^ n.normal()      
-        if self.axis=='Y':            
-            list = [ n.normal().x, n.normal().y, n.normal().z, 0, t.x, t.y, t.z, 0, x.x, x.y, x.z, 0, A.x, A.y,A.z,1]
-        elif self.axis=='Z':
-            list = [ x.x, x.y, x.z, 0,n.normal().x, n.normal().y, n.normal().z, 0,t.x, t.y, t.z, 0, A.x, A.y,A.z,1]
-        else:
-            list = [ t.x, t.y, t.z, 0,n.normal().x, n.normal().y, n.normal().z, 0, x.x*-1, x.y*-1, x.z*-1, 0, A.x, A.y,A.z,1]
-        m= om.MMatrix (list)
+
+        m= orientMatrix(mvector=AB, normal=n, pos=A, axis=self.axis)
+
         pm.xform (self.startZeroJnt, m = m, ws=True) 
         pm.xform (self.startJnt, m = m, ws=True) 
         pm.xform (self.startTipJnt, m = m, ws=True) 
@@ -1317,18 +1273,9 @@ class Spine:
         
         dot = Z.normal()*AB.normal() #se o eixo Z, usado como secundario, for quase paralelo ao vetor do Bone, troca pra eixo Y como secundario
         if abs(dot)>.95:
-            Z=om.MVector(0,1,0)
-            
+            Z=om.MVector(0,1,0)            
         n=AB^Z
-        x = n.normal() ^ AB.normal()
-        t = x.normal() ^ n.normal()      
-        if self.axis=='Y':            
-            list = [ n.normal().x, n.normal().y, n.normal().z, 0, t.x, t.y, t.z, 0, x.x, x.y, x.z, 0, A.x, A.y,A.z,1]
-        elif self.axis=='Z':
-            list = [ x.x, x.y, x.z, 0,n.normal().x, n.normal().y, n.normal().z, 0,t.x, t.y, t.z, 0, A.x, A.y,A.z,1]
-        else:
-            list = [ t.x, t.y, t.z, 0,n.normal().x, n.normal().y, n.normal().z, 0, x.x*-1, x.y*-1, x.z*-1, 0, A.x, A.y,A.z,1]
-        m= om.MMatrix (list)
+        m= orientMatrix(mvector=AB, normal=n, pos=A, axis=self.axis)
         pm.xform (self.endZeroJnt, m = m, ws=True) 
         pm.xform (self.endJnt, m = m, ws=True) 
         pm.xform (self.endTipJnt, m = m, ws=True) 
@@ -1445,3 +1392,241 @@ class Spine:
         weightAttr = cns3.target.connections(p=True, t='parentConstraint') #descobre parametros
         spineMoveall.ikfk >> weightAttr[1]
         ikfkRev.outputX >> weightAttr[0]
+
+class Chain:
+    """
+        Cria uma cadeia de joints com controles fk
+        Parametros: 
+            name (string): nome do novo limb            
+            flipAxis (boolean): se o eixo eh flipado ao longo do bone
+            axis (string:'X','Y' ou 'Z'): eixo ao longo do bone
+            numDiv (int): numero de joints da cadeia
+                             
+    """  
+    ## IMPLEMENTAR:
+    #  nomes dos joints
+    #  talvez conexoes diretas dos controles?
+    #  algum tipo de controle ik para a cadeia
+        
+    def __init__(self, name='chain', flipAxis=False, numDiv=2, axis='X', **kwargs):
+        self.axis=axis
+        self.flipAxis=flipAxis
+        self.name=name
+        self.chainGuideDict={}
+        self.numDiv=numDiv
+        self.chainGuideMoveall=None
+        for i in range (self.numDiv):
+            self.chainGuideDict['guide'+str(i+1)]=[0+i,0,0]
+        #parametros de aparencia dos controles
+        self.chainDict={}
+        self.chainDict['moveAllCntrlSetup']={'nameTempl':self.name+'Moveall', 'icone':'circuloX','size':1.8,'color':(1,1,0) }    
+        self.chainDict['fkCntrlSetup'] = {'nameTempl':self.name+'Fk', 'icone':'cubo','size':.8,'color':(0,1,0) }    
+
+    def doGuide(self, **kwargs):
+        self.chainGuideDict.update(kwargs)
+        
+        #apaga se existir
+        cntrlName=self.chainDict['moveAllCntrlSetup']['nameTempl']+'_guide'
+        if pm.objExists(cntrlName):
+            pm.delete (cntrlName)
+        self.chainGuideMoveall=pm.group(n=cntrlName, em=True)
+
+        self.guideList=[]
+        for i in range(len(self.chainGuideDict.keys())):
+            guideName= self.name+str(i)+'_guide'
+            guide= pm.spaceLocator (n=guideName,p=(0,0,0))
+            self.guideList.append (guide)
+            pm.xform(guide, t=self.chainGuideDict['guide'+str(i+1)], ws=True)
+            pm.parent(guide, self.chainGuideMoveall)
+            
+    def doRig(self):
+        # se nao tiver guide faz um padrao
+        if not self.chainGuideMoveall:
+            self.doGuide()
+            
+        #apagar se ja houver um grupo moveall
+        cntrlName=self.chainDict['moveAllCntrlSetup']['nameTempl']                     
+        if pm.objExists(cntrlName):
+            pm.delete (cntrlName)
+        self.chainMoveAll = pm.group(empty=True, n=cntrlName)
+
+        
+        A=[]
+        AB=[]
+        last=None
+        for obj in self.guideList:
+            p=pm.xform (obj, q=True, t=True, ws=True)
+            P=om.MVector(p)
+            #guarda na lista A as posicoes dos guides como MVector
+            A.append(P)
+            #calcula vetores de direcao entre os guides
+            #guarda na lista AB
+            if last:
+                if self.flipAxis:
+                    V=last-P
+                else:    
+                    V=P-last
+                AB.append(V)
+            last=P
+
+        if self.flipAxis:
+            Z=om.MVector(0,0,1)
+            X=om.MVector(-1,0,0)  
+        else:
+            Z=om.MVector(0,0,-1)
+            X=om.MVector(1,0,0)
+            
+        m=[ 1,0,0,0,
+            0,1,0,0,
+            0,0,1,0,
+            0,0,0,1]
+            
+        last=None
+        self.jntList=[]
+        for i in range(len(AB)):
+            #se a o vetor do bone coincidir com o eixo Z usa o eixo X de secundario
+            dot=AB[i].normal()*Z
+            print dot
+            if abs(dot) < 0.95:
+                normal=AB[i]^Z
+            else:
+                normal=AB[i]^X
+            
+            # descobre a matriz de transformacao orientada e desenha os joints     
+            m=orientMatrix(AB[i], normal, A[i], self.axis)
+            pm.select(cl=True)
+            jnt = pm.joint()
+            self.jntList.append(jnt)
+            pm.xform (jnt, m = m, ws=True) 
+            pm.makeIdentity (jnt, apply=True, r=1, t=0, s=1, n=0, pn=0)
+            if last:
+                pm.parent (jnt, last)
+            last=jnt
+        
+        # desenha o ultimo joint (ou o unico)
+        pm.select(cl=True)
+        jnt = pm.joint()
+        self.jntList.append(jnt)
+        pm.xform (jnt, m = m, ws=True)
+        pm.xform (jnt, t=A[-1], ws=True) 
+        pm.makeIdentity (jnt, apply=True, r=1, t=0, s=1, n=0, pn=0)
+        pm.parent (jnt, last)
+        
+        pm.parent (self.jntList[0], self.chainMoveAll)
+        
+        #faz controles para os joints exceto o da ponta
+        cntrlTodo=[]
+        if len(self.jntList)>1:            
+            cntrlToDo=self.jntList[:-1]
+          
+        self.cntrlList=[]        
+        last=None
+        for jnt in cntrlToDo:
+            displaySetup=self.chainDict['fkCntrlSetup'].copy()
+            cntrlName=self.chainDict['fkCntrlSetup']['nameTempl']
+            cntrl=cntrlCrv (name= cntrlName, obj=jnt, connType='parentConstraint', **displaySetup)
+            self.cntrlList.append (cntrl)
+            if last:
+                pm.parent (cntrl.getParent(), last)
+            last=cntrl    
+            
+        pm.parent (self.cntrlList[0].getParent(), self.chainMoveAll)
+        
+class Neck:
+    """
+        Cria um pescoco com um joint de distribuicao de twist
+        Parametros: 
+            name (string): nome do novo limb            
+            flipAxis (boolean): se o eixo eh flipado ao longo do bone
+            axis (string:'X','Y' ou 'Z'): eixo ao longo do bone
+                             
+    """  
+    ## IMPLEMENTAR:
+        
+    def __init__(self, name='neck', flipAxis=False, axis='X', **kwargs):
+        self.axis=axis
+        self.flipAxis=flipAxis
+        self.name=name
+        self.neckGuideDict={'start':[0,0,0], 'end':[0,2,0]}
+        self.neckGuideMoveall=None
+       #parametros de aparencia dos controles
+        self.neckDict={}
+        self.neckDict['moveAllCntrlSetup'] = {'nameTempl':name+'Moveall', 'icone':'circuloX','size':1,'color':(0,1,0) }
+        self.neckDict['startCntrlSetup'] = {'nameTempl':name+'Start', 'icone':'circuloY','size':1,'color':(0,1,0) }
+        self.neckDict['endCntrlSetup'] = {'nameTempl':name+'End', 'icone':'cubo', 'size':1, 'color':(0,1,0)}
+
+
+
+    def doGuide(self, **kwargs):
+        self.neckGuideDict.update(kwargs)
+        
+        #apaga se existir
+        cntrlName=self.neckDict['moveAllCntrlSetup']['nameTempl']+'_guide'
+        if pm.objExists(cntrlName):
+            pm.delete (cntrlName)
+        self.neckGuideMoveall=pm.group(n=cntrlName, em=True)
+
+        self.startGuide=pm.spaceLocator (p=(0,0,0))
+        pm.xform (self.startGuide, t=neckGuideDict['start'], ws=True)
+        self.endGuide=pm.spaceLocator (p=(0,0,0))
+        pm.xform (self.endGuide, t=neckGuideDict['end'], ws=True)
+        pm.parent (self.startGuide,self.endGuide,self.neckGuideMoveall)
+            
+    def doRig(self):
+        # se nao tiver guide faz um padrao
+        if not self.neckGuideMoveall:
+            self.doGuide()
+            
+        #apagar se ja houver um grupo moveall
+        cntrlName=self.neckDict['moveAllCntrlSetup']['nameTempl']                     
+        if pm.objExists(cntrlName):
+            pm.delete (cntrlName)
+        self.neckMoveAll = pm.group(empty=True, n=cntrlName)
+
+        #doRig
+        start =pm.xform (self.startGuide, q=True, t=True,ws=True)
+        end =pm.xform (self.endGuide, q=True, t=True,ws=True)
+        
+        A=om.MVector(start)
+        B=om.MVector(end)
+        Z=om.MVector(0,0,-1) 
+        AB=B-A  
+        dot = Z.normal()*AB.normal() #se o eixo Z, usado como secundario, for quase paralelo ao vetor do Bone, troca pra eixo Y como secundario
+        if abs(dot)>.95:
+            Z=om.MVector(0,-1,0)
+        
+        n=AB^Z
+        m= orientMatrix(mvector=AB, normal=n, pos=A, axis=self.axis)
+        pm.select (cl=True)
+        j1 = pm.joint()
+        pm.xform (j1, m = m, ws=True) 
+        pm.makeIdentity (j1, apply=True, r=1, t=0, s=1, n=0, pn=0)
+        
+        j2 = pm.joint()
+        pm.xform (j2, m = m, ws=True) 
+        pm.xform (j2, t=B ,ws=True)
+        pm.makeIdentity (j2, apply=True, r=1, t=0, s=1, n=0, pn=0)
+        pm.select (cl=True)
+        j3 = pm.joint()
+        pm.xform (j3, m = m, ws=True) 
+        pm.xform (j3, t=(0,0,0) ,ws=True)
+        pm.makeIdentity (j3, apply=True, r=1, t=0, s=1, n=0, pn=0)
+        
+        aimTwist = AimTwistDivider()
+        aimTwist.start.setParent (j1,r=True)
+        aimTwist.end.setParent (j2,r=True)
+        aimTwist.mid.setParent (self.neckMoveAll)
+        j3.setParent(aimTwist.mid)
+        j3.translate.set(0,0,0)
+        j3.rotate.set(0,0,0)
+        
+        displaySetup= self.neckDict['startCntrlSetup'].copy()
+        cntrlName = displaySetup['nameTempl']        
+        startCntrl = cntrlCrv(name=cntrlName, obj=startGuide, **displaySetup)
+        pm.parentConstraint(startCntrl, j1,mo=True)      
+        displaySetup= self.neckDict['endCntrlSetup'].copy()
+        cntrlName = displaySetup['nameTempl']                
+        endCntrl = cntrlCrv(name=cntrlName, obj=self.endGuide,**displaySetup)
+        pm.parentConstraint(endCntrl, j2,mo=True)
+        endCntrl.getParent().setParent(startCntrl)
+        pm.parent (j1,startCntrl.getParent(),self.neckMoveAll)
