@@ -1531,3 +1531,102 @@ class Chain:
             last=cntrl    
             
         pm.parent (self.cntrlList[0].getParent(), self.chainMoveAll)
+        
+class Neck:
+    """
+        Cria um pescoco com um joint de distribuicao de twist
+        Parametros: 
+            name (string): nome do novo limb            
+            flipAxis (boolean): se o eixo eh flipado ao longo do bone
+            axis (string:'X','Y' ou 'Z'): eixo ao longo do bone
+                             
+    """  
+    ## IMPLEMENTAR:
+        
+    def __init__(self, name='neck', flipAxis=False, axis='X', **kwargs):
+        self.axis=axis
+        self.flipAxis=flipAxis
+        self.name=name
+        self.neckGuideDict={'start':[0,0,0], 'end':[0,2,0]}
+        self.neckGuideMoveall=None
+       #parametros de aparencia dos controles
+        self.neckDict={}
+        self.neckDict['moveAllCntrlSetup'] = {'nameTempl':name+'Moveall', 'icone':'circuloX','size':1,'color':(0,1,0) }
+        self.neckDict['startCntrlSetup'] = {'nameTempl':name+'Start', 'icone':'circuloY','size':1,'color':(0,1,0) }
+        self.neckDict['endCntrlSetup'] = {'nameTempl':name+'End', 'icone':'cubo', 'size':1, 'color':(0,1,0)}
+
+
+
+    def doGuide(self, **kwargs):
+        self.neckGuideDict.update(kwargs)
+        
+        #apaga se existir
+        cntrlName=self.neckDict['moveAllCntrlSetup']['nameTempl']+'_guide'
+        if pm.objExists(cntrlName):
+            pm.delete (cntrlName)
+        self.neckGuideMoveall=pm.group(n=cntrlName, em=True)
+
+        self.startGuide=pm.spaceLocator (p=(0,0,0))
+        pm.xform (self.startGuide, t=neckGuideDict['start'], ws=True)
+        self.endGuide=pm.spaceLocator (p=(0,0,0))
+        pm.xform (self.endGuide, t=neckGuideDict['end'], ws=True)
+        pm.parent (self.startGuide,self.endGuide,self.neckGuideMoveall)
+            
+    def doRig(self):
+        # se nao tiver guide faz um padrao
+        if not self.neckGuideMoveall:
+            self.doGuide()
+            
+        #apagar se ja houver um grupo moveall
+        cntrlName=self.neckDict['moveAllCntrlSetup']['nameTempl']                     
+        if pm.objExists(cntrlName):
+            pm.delete (cntrlName)
+        self.neckMoveAll = pm.group(empty=True, n=cntrlName)
+
+        #doRig
+        start =pm.xform (self.startGuide, q=True, t=True,ws=True)
+        end =pm.xform (self.endGuide, q=True, t=True,ws=True)
+        
+        A=om.MVector(start)
+        B=om.MVector(end)
+        Z=om.MVector(0,0,-1) 
+        AB=B-A  
+        dot = Z.normal()*AB.normal() #se o eixo Z, usado como secundario, for quase paralelo ao vetor do Bone, troca pra eixo Y como secundario
+        if abs(dot)>.95:
+            Z=om.MVector(0,-1,0)
+        
+        n=AB^Z
+        m= orientMatrix(mvector=AB, normal=n, pos=A, axis=self.axis)
+        pm.select (cl=True)
+        j1 = pm.joint()
+        pm.xform (j1, m = m, ws=True) 
+        pm.makeIdentity (j1, apply=True, r=1, t=0, s=1, n=0, pn=0)
+        
+        j2 = pm.joint()
+        pm.xform (j2, m = m, ws=True) 
+        pm.xform (j2, t=B ,ws=True)
+        pm.makeIdentity (j2, apply=True, r=1, t=0, s=1, n=0, pn=0)
+        pm.select (cl=True)
+        j3 = pm.joint()
+        pm.xform (j3, m = m, ws=True) 
+        pm.xform (j3, t=(0,0,0) ,ws=True)
+        pm.makeIdentity (j3, apply=True, r=1, t=0, s=1, n=0, pn=0)
+        
+        aimTwist = AimTwistDivider()
+        aimTwist.start.setParent (j1,r=True)
+        aimTwist.end.setParent (j2,r=True)
+        aimTwist.mid.setParent (self.neckMoveAll)
+        j3.setParent(aimTwist.mid)
+        j3.translate.set(0,0,0)
+        j3.rotate.set(0,0,0)
+        
+        displaySetup= self.neckDict['startCntrlSetup'].copy()
+        cntrlName = displaySetup['nameTempl']        
+        startCntrl = cntrlCrv(name=cntrlName, obj=startGuide, **displaySetup)
+        pm.parentConstraint(startCntrl, j1,mo=True)      
+        displaySetup= self.neckDict['endCntrlSetup'].copy()
+        cntrlName = displaySetup['nameTempl']                
+        endCntrl = cntrlCrv(name=cntrlName, obj=self.endGuide,**displaySetup)
+        pm.parentConstraint(endCntrl, j2,mo=True)
+        endCntrl.getParent().setParent(startCntrl)
+        pm.parent (j1,startCntrl.getParent(),self.neckMoveAll)
