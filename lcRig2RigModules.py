@@ -25,15 +25,9 @@ class Limb():
     def __init__ (self,name='limb',axis='X',flipAxis=False,handJoint=True, **kwargs):
 
         self.limbDict={'name':name,
-                       'ikCntrl':None,
-                       'startCntrl':None,
-                       'midCntrl':None,
-                       'endCntrl':None,
-                       'poleCntrl':None,
                        'flipAxis':flipAxis,
                        'handJoint':handJoint,
-                       'axis':axis,
-                       'moveAll1Cntrl':None} #valores default
+                       'axis':axis } #valores default
 
         self.limbDict.update(kwargs) # atualiza com o q foi entrado
         self.GuideColor=(1,0,1)
@@ -41,7 +35,7 @@ class Limb():
         self.flipAxis = flipAxis
         self.axis = axis
         self.handJoint = handJoint
-        self.limbGuideDict = {'start':[0,0,0], 'mid':[3,0,-1],'end':[6,0,0], 'hand':[7,0,0]} 
+        self.limbGuideDict = {'moveall':[0,0,0],'start':[0,0,0], 'mid':[3,0,-1],'end':[6,0,0], 'hand':[7,0,0]} 
         self.startGuide=None   
         self.endGuide=None   
         self.midGuide=None   
@@ -55,19 +49,18 @@ class Limb():
         self.limbDict['midCntrlSetup'] = {'nameTempl':self.name+'FkMid', 'icone':'cubo', 'size':0.5, 'color':(0,1,0)}
         self.limbDict['endCntrlSetup'] = {'nameTempl':self.name+'FkEnd', 'icone':'cubo', 'size':0.5, 'color':(0,1,0)}
         self.limbDict['poleVecCntrlSetup'] = {'nameTempl':self.name+'PoleVec', 'icone':'bola', 'size':0.4, 'color':(1,0,0)}
-        self.limbDict['nodeTree'] = {}
-        self.limbDict['nameConventions'] = None
+
         ##IMPLEMENTAR padroes de nome 
-
-
+        #self.limbDict['nodeTree'] = {}
+        #self.limbDict['nameConventions'] = None
 
     def doGuide(self,**kwargs): 
         self.limbGuideDict.update(kwargs)
-         ## cria guia se não existir  
-
+        ## cria guia se não existir  
+        #IMPLEMENTAR: se nao tiver valores pro guideDict, faz guide padrao
         if pm.objExists(self.name+'Moveall_guide'):
             pm.delete (self.name+'Moveall_guide')
-        
+                
         self.limbGuideMoveall=pm.group(n=self.name+'Moveall_guide', em=True)
         self.startGuide = pm.spaceLocator (n=self.name+'Start_guide', p=(0,0,0))
         pm.xform (self.startGuide, t=self.limbGuideDict['start'], ws=True)
@@ -92,7 +85,8 @@ class Limb():
         arrow.getParent().setParent(self.startGuide)
         pm.aimConstraint(self.endGuide,arrow, weight=1, aimVector=(1, 0 ,0) , upVector=(0, 0, -1),worldUpObject=self.midGuide, worldUpType='object')
 
-                      
+        self.limbGuideMoveall.translate.set( self.limbGuideDict['moveall'])
+                     
     def doRig(self):
         if not self.limbGuideMoveall:
             self.doGuide()
@@ -102,9 +96,8 @@ class Limb():
             pm.delete (self.name+'Moveall')
             
         #Cria o grupo moveAll
-        limbMoveAll = pm.group(empty=True, n=self.name+'Moveall')
-        limbMoveAll.addAttr('ikfk', at='float',min=0, max=1,dv=1, k=1)
-
+        self.limbMoveAll = pm.group(empty=True, n=self.name+'Moveall')
+        self.limbMoveAll.addAttr('ikfk', at='float',min=0, max=1,dv=1, k=1)
         
         #define pontos do guide como vetores usando api para faciitar os calculos
         p1 = pm.xform (self.startGuide, q=True, t=True, ws=True)
@@ -158,7 +151,7 @@ class Limb():
         #hierarquia
         pm.parent (self.midJnt, self.startJnt)
         pm.parent (self.endJnt, self.midJnt)
-        self.startJnt.setParent (limbMoveAll)
+        self.startJnt.setParent (self.limbMoveAll)
         
         ##joint4(hand) se estiver setado nas opcoes      
         if self.handJoint:
@@ -203,32 +196,30 @@ class Limb():
         
         displaySetup= self.limbDict['moveAll1CntrlSetup'].copy()
         cntrlName = displaySetup['nameTempl']
-
-        moveAll1Cntrl = cntrlCrv( name = cntrlName, obj= self.startJnt , **displaySetup)
+        self.moveAll1Cntrl = cntrlCrv( name = cntrlName, obj= self.startJnt , **displaySetup)
         
         displaySetup= self.limbDict['endCntrlSetup'].copy()
         cntrlName = displaySetup['nameTempl']                  
-        endCntrl = cntrlCrv (name=cntrlName, obj=self.startJnt,connType='parentConstraint', **displaySetup )
-        
-        endCntrl.addAttr('manualStretch', at='float',min=.1,dv=1, k=1)
+        self.endCntrl = cntrlCrv (name=cntrlName, obj=self.startJnt,connType='parentConstraint', **displaySetup )       
+        self.endCntrl.addAttr('manualStretch', at='float',min=.1,dv=1, k=1)
         
         displaySetup=self.limbDict['midCntrlSetup'].copy()
         cntrlName = displaySetup['nameTempl']
-        midCntrl = cntrlCrv (name=cntrlName,obj=self.midJnt,connType = 'orientConstraint',**displaySetup)
-        midCntrl.addAttr('manualStretch', at='float',min=.1,dv=1, k=1)
+        self.midCntrl = cntrlCrv (name=cntrlName,obj=self.midJnt,connType = 'orientConstraint',**displaySetup)
+        self.midCntrl.addAttr('manualStretch', at='float',min=.1,dv=1, k=1)
         
-        pm.pointConstraint (self.midJnt, midCntrl.getParent(), mo=True)
+        pm.pointConstraint (self.midJnt, self.midCntrl.getParent(), mo=True)
         
         ##Estrutura IK
         ikH = pm.ikHandle (sj=self.startJnt, ee=self.endJnt, sol="ikRPsolver")
 
         displaySetup=self.limbDict['ikCntrlSetup'].copy()
         cntrlName = displaySetup['nameTempl']
-        ikCntrl = cntrlCrv(name = cntrlName, obj=ikH[0],**displaySetup)
+        self.ikCntrl = cntrlCrv(name = cntrlName, obj=ikH[0],**displaySetup)
         
         #orienta o controle ik de modo a ter aproximadamente a orientacao do eixo global
         #mas aponta o eixo X para a ponta do ultimo bone               
-        mat=pm.xform (ikCntrl.getParent(), q=True, m=True, ws=True)
+        mat=pm.xform (self.ikCntrl.getParent(), q=True, m=True, ws=True)
         matrix= om.MMatrix (mat)
         Zcomponent = om.MVector (0,0,-1)
         Zaxis = matrix * Zcomponent
@@ -236,18 +227,18 @@ class Limb():
 
         #CD eh o vetor de direcao do ultimo joint                
         ori = orientMatrix(CD, normal, C, self.axis)       
-        pm.xform (ikCntrl.getParent(), m=ori, ws=True)
-        ikH[0].setParent(ikCntrl)
-        ikCntrl.addAttr ('pin', at='float',min=0, max=1,dv=0, k=1)
-        ikCntrl.addAttr ('bias', at='float',min=-0.9, max=0.9, k=1)
-        ikCntrl.addAttr ('autoStretch', at='float',min=0, max=1,dv=1, k=1)
-        ikCntrl.addAttr ('manualStretch', at='float',dv=1, k=1)
-        ikCntrl.addAttr ('twist', at='float',dv=0, k=1)        
+        pm.xform (self.ikCntrl.getParent(), m=ori, ws=True)
+        ikH[0].setParent(self.ikCntrl)
+        self.ikCntrl.addAttr ('pin', at='float',min=0, max=1,dv=0, k=1)
+        self.ikCntrl.addAttr ('bias', at='float',min=-0.9, max=0.9, k=1)
+        self.ikCntrl.addAttr ('autoStretch', at='float',min=0, max=1,dv=1, k=1)
+        self.ikCntrl.addAttr ('manualStretch', at='float',dv=1, k=1)
+        self.ikCntrl.addAttr ('twist', at='float',dv=0, k=1)        
             
         #pole vector
         displaySetup=self.limbDict['poleVecCntrlSetup'].copy()
         cntrlName = displaySetup['nameTempl']
-        poleVec = cntrlCrv(name=cntrlName, obj=self.midJnt,**displaySetup)
+        self.poleVec = cntrlCrv(name=cntrlName, obj=self.midJnt,**displaySetup)
         
         #calcula a direcao q deve ficar o polevector
         BA=B-A
@@ -262,25 +253,25 @@ class Limb():
         #test=pm.spaceLocator (p=(0,0,0)) # locator de teste de onde calculou o ponto mais proximo
         #pm.xform (test, t=T)
         
-        pm.xform (poleVec.getParent() , t=Pole) 
-        pm.xform (poleVec.getParent() , ro=(0,0,0)) 
-        pm.poleVectorConstraint (poleVec, ikH[0])
-        pm.parent (midCntrl.getParent(), endCntrl)
-        pm.parent (endCntrl.getParent(), moveAll1Cntrl)
-        pm.parent (moveAll1Cntrl.getParent(), poleVec.getParent(), ikCntrl.getParent(), limbMoveAll)
+        pm.xform (self.poleVec.getParent() , t=Pole) 
+        pm.xform (self.poleVec.getParent() , ro=(0,0,0)) 
+        pm.poleVectorConstraint (self.poleVec, ikH[0])
+        pm.parent (self.midCntrl.getParent(), self.endCntrl)
+        pm.parent (self.endCntrl.getParent(), self.moveAll1Cntrl)
+        pm.parent (self.moveAll1Cntrl.getParent(), self.poleVec.getParent(), self.ikCntrl.getParent(), self.limbMoveAll)
 
         #handCntrls se houver
         if self.handJoint:
             displaySetup=self.limbDict['startCntrlSetup']
             cntrlName=displaySetup['nameTempl']
-            startCntrl = cntrlCrv (name=cntrlName, obj=self.handJnt,**displaySetup)
+            self.startCntrl = cntrlCrv (name=cntrlName, obj=self.handJnt,**displaySetup)
             buf=pm.group (em=True)
             matrix=pm.xform (self.handJnt, q=True, ws=True, m=True)
             pm.xform (buf, m=matrix, ws=True)
-            pm.parent (buf,ikCntrl)
-            handCnst = pm.orientConstraint (buf,startCntrl, self.handJnt, mo=False)
-            pm.pointConstraint (self.endJnt,startCntrl.getParent(), mo=True)
-            pm.parent (startCntrl.getParent(), midCntrl)
+            pm.parent (buf,self.ikCntrl)
+            handCnst = pm.orientConstraint (buf,self.startCntrl, self.handJnt, mo=False)
+            pm.pointConstraint (self.endJnt,self.startCntrl.getParent(), mo=True)
+            pm.parent (self.startCntrl.getParent(), self.midCntrl)
         
         #display
         ikH[0].visibility.set(0)
@@ -288,13 +279,13 @@ class Limb():
         #grupos de stretch
         startGrp = pm.group (empty=True)
         endGrp=pm.group (empty=True)
-        pm.parent (endGrp,ikCntrl,r=True)
+        pm.parent (endGrp,self.ikCntrl,r=True)
         pm.xform (startGrp , t=p1, ws=True)
-        pm.parent (startGrp,endCntrl)
+        pm.parent (startGrp,self.endCntrl)
         
         ##NODE TREE#######               
         #Pin
-        p5 = pm.xform (poleVec.getParent(), q=True, t=True, ws=True)
+        p5 = pm.xform (self.poleVec.getParent(), q=True, t=True, ws=True)
         E=om.MVector (p5)
         
         AE = A - E
@@ -317,11 +308,11 @@ class Limb():
         startGrp.worldMatrix[0] >> pinDist1.inMatrix1
         endGrp.worldMatrix[0] >> pinDist2.inMatrix1
         
-        poleVec.worldMatrix[0]  >> pinDist1.inMatrix2
-        poleVec.worldMatrix[0]  >> pinDist2.inMatrix2
+        self.poleVec.worldMatrix[0]  >> pinDist1.inMatrix2
+        self.poleVec.worldMatrix[0]  >> pinDist2.inMatrix2
         
-        limbMoveAll.scaleX >> pinMultiScale1.input1
-        limbMoveAll.scaleX >> pinMultiScale2.input1
+        self.limbMoveAll.scaleX >> pinMultiScale1.input1
+        self.limbMoveAll.scaleX >> pinMultiScale2.input1
         
         pinMultiScale1.input2.set (AE.length())
         pinMultiScale2.input2.set (CE.length())
@@ -357,7 +348,7 @@ class Limb():
         startGrp.worldMatrix[0] >> stretchDist.inMatrix1
         endGrp.worldMatrix[0] >> stretchDist.inMatrix2
         
-        limbMoveAll.scaleX >> stretchMultiScale.input1
+        self.limbMoveAll.scaleX >> stretchMultiScale.input1
         stretchMultiScale.input2.set (distMax)
         stretchMultiScale.output >> stretchManualStretch1.input2
         stretchManualStretch1.output >> stretchNorm.input2X
@@ -413,23 +404,23 @@ class Limb():
         stretchPinBlend1.output >> ikfkBlend1.input[0]
         stretchPinBlend2.output >> ikfkBlend2.input[0]
                
-        endCntrl.manualStretch >> ikfkBlend1.input[1]
-        midCntrl.manualStretch >> ikfkBlend2.input[1]
+        self.endCntrl.manualStretch >> ikfkBlend1.input[1]
+        self.midCntrl.manualStretch >> ikfkBlend2.input[1]
        
-        limbMoveAll.ikfk >> ikfkReverse.inputX
+        self.limbMoveAll.ikfk >> ikfkReverse.inputX
         ikfkReverse.outputX >> ikfkBlend1.attributesBlender
         ikfkReverse.outputX >> ikfkBlend2.attributesBlender
         
-        cnstrConn = midCntrl.connections(t='orientConstraint', d=True, s=False)[0] ## arriscando em pegar o primeiro...
+        cnstrConn = self.midCntrl.connections(t='orientConstraint', d=True, s=False)[0] ## arriscando em pegar o primeiro...
         weightAttr = cnstrConn.target.connections(p=True, t='orientConstraint') ##Descobre o parametro de peso do constraint        
         ikfkReverse.outputX >> weightAttr[0]
         
         if self.handJoint:
             handTargetAttrs = handCnst.target.connections(p=True, t='orientConstraint')
             ikfkReverse.outputX >> handTargetAttrs [1]
-            limbMoveAll.ikfk >> handTargetAttrs [0]
+            self.limbMoveAll.ikfk >> handTargetAttrs [0]
         
-        limbMoveAll.ikfk >> ikH[0].ikBlend      
+        self.limbMoveAll.ikfk >> ikH[0].ikBlend      
         ikfkBlend1.output >> self.startJnt.attr('scale'+axisName) 
         ikfkBlend2.output >> self.midJnt.attr('scale'+axisName)
         
@@ -437,44 +428,34 @@ class Limb():
         ##ikfk visibility
         ikCntrlVisCond = pm.createNode ('condition',n='ikVisCond')
         fkCntrlVisCond = pm.createNode ('condition',n='fkVisCond')
-        limbMoveAll.ikfk >> ikCntrlVisCond.ft
+        self.limbMoveAll.ikfk >> ikCntrlVisCond.ft
         ikCntrlVisCond.secondTerm.set (0)
         ikCntrlVisCond.operation.set (1)
         ikCntrlVisCond.colorIfTrueR.set (1)
         ikCntrlVisCond.colorIfFalseR.set (0)
-        limbMoveAll.ikfk >> fkCntrlVisCond.ft
+        self.limbMoveAll.ikfk >> fkCntrlVisCond.ft
         fkCntrlVisCond.secondTerm.set (1)
         fkCntrlVisCond.operation.set (1)
         fkCntrlVisCond.colorIfTrueR.set (1)
         fkCntrlVisCond.colorIfFalseR.set (0)
         
-        ikCntrlVisCond.outColor.outColorR >> ikCntrl.getParent().visibility
-        ikCntrlVisCond.outColor.outColorR >> poleVec.getParent().visibility
-        fkCntrlVisCond.outColor.outColorR >> endCntrl.getParent().visibility
+        ikCntrlVisCond.outColor.outColorR >> self.ikCntrl.getParent().visibility
+        ikCntrlVisCond.outColor.outColorR >> self.poleVec.getParent().visibility
+        fkCntrlVisCond.outColor.outColorR >> self.endCntrl.getParent().visibility
                        
         ##Atributos e conexoes do controle ik
-        ikCntrl.bias >> biasAdd2.input1D[1]
-        ikCntrl.bias >> biasAdd1.input1D[0]
-        ikCntrl.pin >> stretchPinBlend1.attributesBlender
-        ikCntrl.pin >> stretchPinBlend2.attributesBlender
-        ikCntrl.manualStretch >> stretchManualStretch1.input1
-        ikCntrl.manualStretch >> stretchManualStretch2.input1
-        ikCntrl.manualStretch >> stretchManualStretch3.input1
-        ikCntrl.autoStretch >> autoStretchSwitch.attributesBlender
-        ikCntrl.pin >> twistBlend1.attributesBlender
-        ikCntrl.twist >> twistBlend1.input[0]
+        self.ikCntrl.bias >> biasAdd2.input1D[1]
+        self.ikCntrl.bias >> biasAdd1.input1D[0]
+        self.ikCntrl.pin >> stretchPinBlend1.attributesBlender
+        self.ikCntrl.pin >> stretchPinBlend2.attributesBlender
+        self.ikCntrl.manualStretch >> stretchManualStretch1.input1
+        self.ikCntrl.manualStretch >> stretchManualStretch2.input1
+        self.ikCntrl.manualStretch >> stretchManualStretch3.input1
+        self.ikCntrl.autoStretch >> autoStretchSwitch.attributesBlender
+        self.ikCntrl.pin >> twistBlend1.attributesBlender
+        self.ikCntrl.twist >> twistBlend1.input[0]
 
-        ###Dicionario do Limb
-        self.limbDict['ikCntrl'] = ikCntrl
-        self.limbDict['midCntrl'] = midCntrl
-        self.limbDict['endCntrl'] = endCntrl
-        self.limbDict['poleVec'] = poleVec
-        self.limbDict['joint1'] = self.startJnt
-        self.limbDict['joint2'] = self.midJnt
-        self.limbDict['joint3'] = self.endJnt
-        if self.handJnt:
-            self.limbDict['joint4'] = self.handJnt
-        self.limbDict['limbMoveAll'] = limbMoveAll
+        #IMPLEMENTAR atualizar guideDict com valores atuais
         
 class Finger:
     """
@@ -504,11 +485,9 @@ class Finger:
         self.fold2Guide=None
         self.fingerGuideDict={'moveall':[0,0,0],'palm':[0,0,0],'base':[1,0,0],'tip':[2,0,0], 'fold1':[0,0.05,0],'fold2':[0,0,0]}
         self.fingerGuideDict.update(kwargs) # atualiza com o q foi entrado
-
-        
         
         ##setaqens de aparencia dos controles
-        self.fingerDict={}
+        self.fingerDict={'name':name,'folds':folds, 'axis':axis, 'flipAxis':flipAxis}
         self.fingerDict['moveallCntrlSetup']={'nameTempl':self.name+'MoveAll', 'icone':'circuloX','size':0.1,'color':(1,1,0) }    
         self.fingerDict['palmCntrlSetup']={'nameTempl':self.name+'palm', 'icone':'cubo','size':0.2,'color':(1,0,0) }    
         self.fingerDict['baseCntrlSetup']={'nameTempl':self.name+'base', 'icone':'cubo','size':0.3,'color':(1,1,0) }    
@@ -741,7 +720,7 @@ class Hand:
         self.folds=folds
         self.fingerNum = fingerNum
         self.handGuideMoveall=None
-        self.handDict={}
+        self.handDict={'name':name, 'axis':axis, 'flipAxis':flipAxis, 'folds':folds, 'fingerNum':fingerNum}
         self.handDict['fingers']={}
         self.handDict['moveall']=[0,0,0]
         for i in range(fingerNum):
@@ -777,15 +756,16 @@ class Hand:
         if pm.objExists (self.name+'Moveall'):
             pm.delete (self.name+'Moveall')
         
-        handMoveall =pm.group(n=self.name+'Moveall',em=True)
-        pm.xform (handMoveall, ws=True, t=self.handDict['moveall'])
+        self.handMoveall =pm.group(n=self.name+'Moveall',em=True)
+        pm.xform (self.handMoveall, ws=True, t=self.handDict['moveall'])
         for finger in self.handDict['fingers']:                                                                                  
             f = self.handDict['fingers'][finger]['instance']
             dict=self.handDict['fingers'][finger]['fingerGuideDict']
             f.doRig()
-            pm.parent (f.fingerMoveall, handMoveall)
+            pm.parent (f.fingerMoveall, self.handMoveall)
 
-
+        #IMPLEMENTAR atualizar o guideDict
+        
 class Foot:
     """
         Cria um pe
@@ -804,11 +784,11 @@ class Foot:
         self.name=name
         self.flipAxis=flipAxis
         self.axis=axis
-        self.footGuideDict={'center':[0,0,0],'tip':[3,0,0],'heel':[-1,0,0],'ankle':[0,1,0],'ball':[2,0.5,0],'in':[2,0,-1],'out':[2,0,1]}
+        self.footGuideDict={'moveall':[0,0,0],'center':[0,0,0],'tip':[3,0,0],'heel':[-1,0,0],'ankle':[0,1,0],'ball':[2,0.5,0],'in':[2,0,-1],'out':[2,0,1]}
         self.footGuideMoveall=None
         
         #definicoes da aparencia dos controles
-        self.footDict={}
+        self.footDict={'name':name, 'axis':axis, 'flipAxis':flipAxis}
         self.footDict['moveallCntrlSetup']={'nameTempl':self.name+'MoveAll', 'icone':'circuloX','size':1.8,'color':(1,1,0) }    
         self.footDict['centerCntrlSetup'] = {'nameTempl':self.name+'Center', 'icone':'circuloX','size':2,'color':(1,1,0) }    
         self.footDict['tipCntrlSetup'] = {'nameTempl':self.name+'Tip', 'icone':'bola','size':0.5,'color':(0,1,1)}
@@ -824,17 +804,14 @@ class Foot:
         self.footDict['toeCntrlSetup'] = {'nameTempl':self.name+'Toe', 'icone':'circuloX', 'size':1.0, 'color':(1,1,0)}
         self.footDict['joint1FkCntrlSetup'] = {'nameTempl':self.name+'Joint1Fk', 'icone':'cubo', 'size':1.0, 'color':(0,1,0)}
         self.footDict['joint2FkCntrlSetup'] = {'nameTempl':self.name+'Joint2Fk', 'icone':'cubo', 'size':1.0, 'color':(0,1,0)}
-          
-        self.footDict['nodeTree'] = {}
-        self.footDict['nameConventions'] = None
+         
                 
     def doGuide(self,**kwargs):
         #atualiza o footGuideDict com o q for entrado aqui nesse metodo
         #ex: doGuide (center=[0,0,0], tip=[10,10,0]
          
         self.footGuideDict.update(kwargs)
-        
-        
+                
         guideName=self.footDict['moveallCntrlSetup']['nameTempl']+'_guide' 
         # deleta se existir
         if pm.objExists(guideName):
@@ -886,6 +863,8 @@ class Foot:
         
         pm.parent (self.centerGuide,self.tipGuide,self.heelGuide,self.ankleGuide,self.ballGuide,self.inGuide,self.outGuide, self.footGuideMoveall)
         
+        self.footGuideMoveall.translate.set(self.footGuideDict['moveall'])
+                
     def doRig(self):
         if not self.footGuideMoveall:
             self.doGuide()
@@ -894,7 +873,6 @@ class Foot:
         if pm.objExists(cntrlName):
             pm.delete (cntrlName)
             
-
         #esqueleto
         center=pm.xform (self.centerGuide, q=True,ws=True, t=True)
         tip=pm.xform (self.tipGuide, q=True,ws=True, t=True)
@@ -949,7 +927,7 @@ class Foot:
         #esse controle deve levar o controle ik da ponta do limb para funcionar o pe 
         displaySetup= self.footDict['jointCntrlSetup'].copy()
         cntrlName = displaySetup['nameTempl']
-        j1Cntrl=cntrlCrv(name=cntrlName,obj=j1,connType='parentConstraint', **displaySetup)
+        self.limbConnectionCntrl=cntrlCrv(name=cntrlName,obj=j1,connType='parentConstraint', **displaySetup)
 
         #base cntrl
         displaySetup= self.footDict['baseCntrlSetup'].copy()
@@ -1016,7 +994,7 @@ class Foot:
         slideCntrl.getParent().setParent(baseCntrl)
         ballIkh[0].setParent (ballCntrl)
         tipIkh[0].setParent (toeCntrl)
-        j1Cntrl.getParent().setParent (ballCntrl)
+        self.limbConnectionCntrl.getParent().setParent (ballCntrl)
         pm.parent (j1,baseCntrl.getParent(),footMoveall)
         
         #rollCntrl
@@ -1100,8 +1078,9 @@ class Foot:
         weightAttr = parCnstr.target.connections(p=True, t='parentConstraint') #descobre parametros
         footMoveall.ikfk >> weightAttr[0]
         ikfkRev.outputX >> weightAttr[1]
-        
-        
+            
+        #IMPLEMENTAR guardar a posicao dos guides
+                
 class Spine:
     """
         Cria uma espinha
@@ -1124,27 +1103,24 @@ class Spine:
         self.endTipGuide=None
         self.startTipGuide=None
         
-        self.spineGuideDict={'start':[0,0,0],'mid':[0,4,0],'end':[0,8,0], 'startTip':[0,-2,0],'endTip':[0,11,0]}
+        self.spineGuideDict={'moveall':[0,0,0],'start':[0,0,0],'mid':[0,4,0],'end':[0,8,0], 'startTip':[0,-2,0],'endTip':[0,11,0]}
         self.name=name
         self.flipAxis=flipAxis
         self.axis=axis
         self.spineGuideMoveall=None
         
         #dicionario q determina a aparencia dos controles
-        self.spineDict={}
+        self.spineDict={'name':name, 'axis':axis, 'flipAxis':flipAxis}
         self.spineDict['moveallSetup']={'nameTempl':self.name+'MoveAll', 'icone':'circuloX','size':1.8,'color':(1,1,0) }    
-        self.spineDict['spine0CntrlSetup'] = {'nameTempl':self.name+'spine0', 'icone':'circuloY','size':4,'color':(0,0,1) }    
+        self.spineDict['hipCntrlSetup'] = {'nameTempl':self.name+'Hip', 'icone':'circuloY','size':4,'color':(0,0,1) }
+        self.spineDict['spineFkCntrlSetup'] = {'nameTempl':self.name+'SpineFk', 'icone':'circuloY','size':2,'color':(0,0,1) }      
         self.spineDict['startFkCntrlSetup'] = {'nameTempl':self.name+'StartFk', 'icone':'cubo','size':1,'color':(0,1,0)}
         self.spineDict['midFkOffsetCntrlSetup'] = {'nameTempl':self.name+'MidFkOff', 'icone':'circuloY', 'size':2, 'color':(1,1,0) }
         self.spineDict['midFkCntrlSetup'] = {'nameTempl':self.name+'MidFk', 'icone':'cubo', 'size':1, 'color':(0,1,0) }
         self.spineDict['endFkCntrlSetup'] = {'nameTempl':self.name+'EndFk', 'icone':'cubo', 'size':1, 'color':(0,1,0) }
         self.spineDict['startIkCntrlSetup'] = {'nameTempl':self.name+'StartIk', 'icone':'cubo', 'size':2, 'color':(1,0,0)}
         self.spineDict['midIkCntrlSetup'] = {'nameTempl':self.name+'MidIk', 'icone':'circuloY', 'size':2, 'color':(1,1,0)}
-        self.spineDict['endIkCntrlSetup'] = {'nameTempl':self.name+'EndIk', 'icone':'cubo', 'size':2, 'color':(1,0,0)}
-          
-        self.spineDict['nodeTree'] = {}
-        self.spineDict['nameConventions'] = None        
-
+        self.spineDict['endIkCntrlSetup'] = {'nameTempl':self.name+'EndIk', 'icone':'cubo', 'size':2, 'color':(1,0,0)}      
 
     def doGuide(self, **kwargs):
         self.spineGuideDict.update(kwargs)
@@ -1178,7 +1154,8 @@ class Spine:
         self.startTipGuide.setParent(self.startGuide)
 
         pm.parent (self.startGuide,midGuideGrp,self.endGuide, self.spineGuideMoveall)
-        
+        self.spineGuideMoveall.translate.set (self.spineGuideDict['moveall'])
+                
     def doRig(self):
         #se nao tiver guide, faz
         if not self.spineGuideMoveall:
@@ -1190,43 +1167,50 @@ class Spine:
         spineRibbon=None
         
         #cria controles fk com nomes e setagem de display vindas do spineDict
-        displaySetup= self.spineDict['spine0CntrlSetup'].copy()
+        displaySetup= self.spineDict['hipCntrlSetup'].copy()
         cntrlName = displaySetup['nameTempl'] 
-        spine0FkCntrl = cntrlCrv(name=cntrlName , obj=self.startGuide,**displaySetup) 
+        self.hipCntrl = cntrlCrv(name=cntrlName , obj=self.startGuide,**displaySetup) 
+
+        displaySetup= self.spineDict['spineFkCntrlSetup'].copy()
+        cntrlName = displaySetup['nameTempl'] 
+        self.spineFkCntrl = cntrlCrv(name=cntrlName , obj=self.startGuide,**displaySetup) 
+        self.spineFkCntrl.getParent().setParent(self.hipCntrl)
         
         displaySetup= self.spineDict['startFkCntrlSetup'].copy()
         cntrlName = displaySetup['nameTempl']        
-        startFkCntrl = cntrlCrv(name=cntrlName, obj=self.startGuide,**displaySetup)
-        startFkCntrl.getParent().setParent(spine0FkCntrl)
+        self.startFkCntrl = cntrlCrv(name=cntrlName, obj=self.startGuide,**displaySetup)
+        self.startFkCntrl.getParent().setParent(self.hipCntrl)
         
         displaySetup= self.spineDict['midFkCntrlSetup'].copy()
         cntrlName = displaySetup['nameTempl']        
-        midFkCntrl = cntrlCrv(name=cntrlName, obj=self.midGuide,**displaySetup)
+        self.midFkCntrl = cntrlCrv(name=cntrlName, obj=self.midGuide,**displaySetup)
         
         displaySetup= self.spineDict['midFkOffsetCntrlSetup'].copy()
         cntrlName = displaySetup['nameTempl']                
-        midFkOffsetCntrl = cntrlCrv(name=cntrlName, obj=self.midGuide,**displaySetup) #esse controle faz o offset do ribbon e permanece orientado corretamente
-        midFkOffsetCntrl.getParent().setParent(midFkCntrl)
-        midFkCntrl.getParent().setParent(startFkCntrl)
+        self.midFkOffsetCntrl = cntrlCrv(name=cntrlName, obj=self.midGuide,**displaySetup) #esse controle faz o offset do ribbon e permanece orientado corretamente
+        self.midFkOffsetCntrl.getParent().setParent(self.midFkCntrl)
+        self.midFkCntrl.getParent().setParent(self.spineFkCntrl)
         
         displaySetup= self.spineDict['endFkCntrlSetup'].copy()
         cntrlName = displaySetup['nameTempl']                
-        endFkCntrl = cntrlCrv(name=cntrlName, obj=self.endGuide,**displaySetup)
-        endFkCntrl.getParent().setParent(midFkCntrl)
+        self.endFkCntrl = cntrlCrv(name=cntrlName, obj=self.endGuide,**displaySetup)
+        self.endFkCntrl.getParent().setParent(self.midFkCntrl)
         
         #cria controles ik com nomes e setagem de display vindas do spineDict
         displaySetup= self.spineDict['startIkCntrlSetup'].copy()
         cntrlName = displaySetup['nameTempl']
-        startIkCntrl = cntrlCrv(name=cntrlName, obj=self.startGuide,**displaySetup)
-
+        self.startIkCntrl = cntrlCrv(name=cntrlName, obj=self.startGuide,**displaySetup)
+        self.startIkCntrl.getParent().setParent(self.hipCntrl)
+        
         displaySetup= self.spineDict['midIkCntrlSetup'].copy()
         cntrlName = displaySetup['nameTempl']
-        midIkCntrl = cntrlCrv(name=cntrlName, obj=self.midGuide,**displaySetup)
+        self.midIkCntrl = cntrlCrv(name=cntrlName, obj=self.midGuide,**displaySetup)
 
         displaySetup= self.spineDict['endIkCntrlSetup'].copy()
         cntrlName = displaySetup['nameTempl']
-        endIkCntrl = cntrlCrv(name=cntrlName, obj=self.endGuide,**displaySetup)
-        
+        self.endIkCntrl = cntrlCrv(name=cntrlName, obj=self.endGuide,**displaySetup)
+        self.endIkCntrl.getParent().setParent(self.hipCntrl)    
+            
         #Cria os joints orientados em X down
         start=pm.xform(self.startGuide,q=True,t=True,ws=True)
         startTip=pm.xform(self.startTipGuide,q=True,t=True,ws=True)
@@ -1301,7 +1285,7 @@ class Spine:
         if abs(dot)>.95:
             Z=om.MVector(0,-1,0)
  
-        spineRibbon = RibbonBezierSimple(name=self.name+'Ribbon_',size=AB.length())
+        spineRibbon = RibbonBezierSimple(name=self.name+'Ribbon_',size=AB.length(), offsetStart=0.05, offsetEnd=0.05)
         spineRibbon.doRig()
         
         #cria o sistema que vai orientar o controle do meio por calculo vetorial
@@ -1321,20 +1305,20 @@ class Spine:
                   
         ##Liga os controles do meio do ik e do meioOffset fk no aimTwist
         #eles trabalharam somente por translacao
-        pm.pointConstraint (startIkCntrl, endIkCntrl, midIkCntrl.getParent(), mo=True)
-        pm.orientConstraint (aimTwist.mid, midIkCntrl, mo=True)
-        midIkCntrl.rotate.lock()
-        midIkCntrl.rotate.setKeyable(0)
-        pm.orientConstraint (aimTwist.mid, midFkOffsetCntrl, mo=True)
-        midFkOffsetCntrl.rotate.lock()
-        midFkOffsetCntrl.rotate.setKeyable(0)
+        pm.pointConstraint (self.startIkCntrl, self.endIkCntrl, self.midIkCntrl.getParent(), mo=True)
+        pm.orientConstraint (aimTwist.mid, self.midIkCntrl, mo=True)
+        self.midIkCntrl.rotate.lock()
+        self.midIkCntrl.rotate.setKeyable(0)
+        pm.orientConstraint (aimTwist.mid, self.midFkOffsetCntrl, mo=True)
+        self.midFkOffsetCntrl.rotate.lock()
+        self.midFkOffsetCntrl.rotate.setKeyable(0)
         
         #faz os constraints do ribbon nos controles ik e fk pra fazer blend
-        cns1=pm.parentConstraint (startFkCntrl, startIkCntrl, spineRibbon.startCntrl, mo=True)
+        cns1=pm.parentConstraint (self.startFkCntrl, self.startIkCntrl, spineRibbon.startCntrl, mo=True)
         mid=pm.xform(self.midGuide,q=True,t=True,ws=True)
         pm.xform (spineRibbon.midCntrl.getParent(), t=mid, ws=True)
-        cns2=pm.parentConstraint (midFkOffsetCntrl, midIkCntrl, spineRibbon.midCntrl, mo=True)
-        cns3=pm.parentConstraint (endFkCntrl, endIkCntrl, spineRibbon.endCntrl, mo=True)
+        cns2=pm.parentConstraint (self.midFkOffsetCntrl, self.midIkCntrl, spineRibbon.midCntrl, mo=True)
+        cns3=pm.parentConstraint (self.endFkCntrl, self.endIkCntrl, spineRibbon.endCntrl, mo=True)
         
         #parenteia os joints das pontas nos controles do ribbon
         self.startZeroJnt.setParent (spineRibbon.startCntrl.getParent())
@@ -1349,10 +1333,10 @@ class Spine:
         #cria o moveall da espinha
         displaySetup= self.spineDict['moveallSetup'].copy()
         cntrlName = displaySetup['nameTempl']
-        spineMoveall=pm.group(n=cntrlName, em=True)
+        self.spineMoveall=pm.group(n=cntrlName, em=True)
         
         #e parenteia todo mundo
-        pm.parent (twistExtractor1.extractorGrp, twistExtractor2.extractorGrp, spineRibbon.moveall, startIkCntrl.getParent(),midIkCntrl.getParent(),endIkCntrl.getParent(),spine0FkCntrl.getParent(), spineMoveall)
+        pm.parent (twistExtractor1.extractorGrp, twistExtractor2.extractorGrp, spineRibbon.moveall,self.midIkCntrl.getParent(),self.hipCntrl.getParent(), self.spineMoveall)
 
 
         #conecta os twist extractors nos twists do ribbon
@@ -1360,39 +1344,42 @@ class Spine:
         twistExtractor2.extractor.extractTwist >> spineRibbon.endCntrl.twist
         
         #cria o node tree do blend ikfk
-        spineMoveall.addAttr ('ikfk', at='float', max=1, min=0, dv=1, k=1)
+        self.spineMoveall.addAttr ('ikfk', at='float', max=1, min=0, dv=1, k=1)
         ikfkRev = pm.createNode('reverse')
         ikfkCond1 = pm.createNode('condition')
         ikfkCond2 = pm.createNode('condition')
-        spineMoveall.ikfk >> ikfkCond1.firstTerm
-        spineMoveall.ikfk >> ikfkCond2.firstTerm
-        spineMoveall.ikfk >> ikfkRev.inputX
+        self.spineMoveall.ikfk >> ikfkCond1.firstTerm
+        self.spineMoveall.ikfk >> ikfkCond2.firstTerm
+        self.spineMoveall.ikfk >> ikfkRev.inputX
         
         #visibilidade ik fk        
         ikfkCond1.secondTerm.set (0)
         ikfkCond1.operation.set (2)
         ikfkCond1.colorIfTrueR.set (1)
         ikfkCond1.colorIfFalseR.set (0)
-        ikfkCond1.outColorR >> startIkCntrl.getParent().visibility
-        ikfkCond1.outColorR >> midIkCntrl.getParent().visibility
-        ikfkCond1.outColorR >> endIkCntrl.getParent().visibility        
+        ikfkCond1.outColorR >> self.startIkCntrl.getParent().visibility
+        ikfkCond1.outColorR >> self.midIkCntrl.getParent().visibility
+        ikfkCond1.outColorR >> self.endIkCntrl.getParent().visibility        
         ikfkCond2.secondTerm.set (1)
         ikfkCond2.operation.set (4)
         ikfkCond2.colorIfTrueR.set (1)
         ikfkCond2.colorIfFalseR.set (0)
-        ikfkCond2.outColorR >> startFkCntrl.getParent().visibility
-
+        ikfkCond2.outColorR >> self.startFkCntrl.getParent().visibility
+        ikfkCond2.outColorR >> self.spineFkCntrl.getParent().visibility
+        
         #blend dos constraints         
         weightAttr = cns1.target.connections(p=True, t='parentConstraint') #descobre parametros
-        spineMoveall.ikfk >> weightAttr[1]
+        self.spineMoveall.ikfk >> weightAttr[1]
         ikfkRev.outputX >> weightAttr[0]
         weightAttr = cns2.target.connections(p=True, t='parentConstraint') #descobre parametros
-        spineMoveall.ikfk >> weightAttr[1]
+        self.spineMoveall.ikfk >> weightAttr[1]
         ikfkRev.outputX >> weightAttr[0]
         weightAttr = cns3.target.connections(p=True, t='parentConstraint') #descobre parametros
-        spineMoveall.ikfk >> weightAttr[1]
+        self.spineMoveall.ikfk >> weightAttr[1]
         ikfkRev.outputX >> weightAttr[0]
-
+        
+        #IMPLEMENTAR guardar a posicao dos guides
+        
 class Chain:
     """
         Cria uma cadeia de joints com controles fk
@@ -1414,11 +1401,11 @@ class Chain:
         self.name=name
         self.chainGuideDict={}
         self.numDiv=numDiv
-        self.chainGuideMoveall=None
+        self.chainGuideMoveall={'moveall':[0,0,0]}
         for i in range (self.numDiv):
             self.chainGuideDict['guide'+str(i+1)]=[0+i,0,0]
         #parametros de aparencia dos controles
-        self.chainDict={}
+        self.chainDict={'name':name, 'axis':axis, 'flipAxis':flipAxis}
         self.chainDict['moveAllCntrlSetup']={'nameTempl':self.name+'Moveall', 'icone':'circuloX','size':1.8,'color':(1,1,0) }    
         self.chainDict['fkCntrlSetup'] = {'nameTempl':self.name+'Fk', 'icone':'cubo','size':.8,'color':(0,1,0) }    
 
@@ -1438,7 +1425,9 @@ class Chain:
             self.guideList.append (guide)
             pm.xform(guide, t=self.chainGuideDict['guide'+str(i+1)], ws=True)
             pm.parent(guide, self.chainGuideMoveall)
-            
+
+        self.chainGuideMoveall.translate.set (self.chainGuideMoveall['moveall'])
+                   
     def doRig(self):
         # se nao tiver guide faz um padrao
         if not self.chainGuideMoveall:
@@ -1532,6 +1521,8 @@ class Chain:
             
         pm.parent (self.cntrlList[0].getParent(), self.chainMoveAll)
         
+        #IMPLEMENTAR: guardar as posicoes dos locators
+               
 class Neck:
     """
         Cria um pescoco com um joint de distribuicao de twist
@@ -1541,16 +1532,15 @@ class Neck:
             axis (string:'X','Y' ou 'Z'): eixo ao longo do bone
                              
     """  
-    ## IMPLEMENTAR:
         
     def __init__(self, name='neck', flipAxis=False, axis='X', **kwargs):
         self.axis=axis
         self.flipAxis=flipAxis
         self.name=name
-        self.neckGuideDict={'start':[0,0,0], 'end':[0,2,0]}
+        self.neckGuideDict={'moveall':[0,0,0],'start':[0,0,0], 'end':[0,2,0]}
         self.neckGuideMoveall=None
        #parametros de aparencia dos controles
-        self.neckDict={}
+        self.neckDict={'name':name, 'axis':axis, 'flipAxis':flipAxis}
         self.neckDict['moveAllCntrlSetup'] = {'nameTempl':name+'Moveall', 'icone':'circuloX','size':1,'color':(0,1,0) }
         self.neckDict['startCntrlSetup'] = {'nameTempl':name+'Start', 'icone':'circuloY','size':1,'color':(0,1,0) }
         self.neckDict['endCntrlSetup'] = {'nameTempl':name+'End', 'icone':'cubo', 'size':1, 'color':(0,1,0)}
@@ -1567,11 +1557,13 @@ class Neck:
         self.neckGuideMoveall=pm.group(n=cntrlName, em=True)
 
         self.startGuide=pm.spaceLocator (p=(0,0,0))
-        pm.xform (self.startGuide, t=neckGuideDict['start'], ws=True)
+        pm.xform (self.startGuide, t=self.neckGuideDict['start'], ws=True)
         self.endGuide=pm.spaceLocator (p=(0,0,0))
-        pm.xform (self.endGuide, t=neckGuideDict['end'], ws=True)
+        pm.xform (self.endGuide, t=self.neckGuideDict['end'], ws=True)
         pm.parent (self.startGuide,self.endGuide,self.neckGuideMoveall)
-            
+        
+        self.neckGuideMoveall.translate.set(self.neckGuideDict['moveall'])
+                   
     def doRig(self):
         # se nao tiver guide faz um padrao
         if not self.neckGuideMoveall:
@@ -1622,11 +1614,14 @@ class Neck:
         
         displaySetup= self.neckDict['startCntrlSetup'].copy()
         cntrlName = displaySetup['nameTempl']        
-        startCntrl = cntrlCrv(name=cntrlName, obj=startGuide, **displaySetup)
-        pm.parentConstraint(startCntrl, j1,mo=True)      
+        self.startCntrl = cntrlCrv(name=cntrlName, obj=self.startGuide, **displaySetup)
+        pm.parentConstraint(self.startCntrl, j1,mo=True)      
         displaySetup= self.neckDict['endCntrlSetup'].copy()
         cntrlName = displaySetup['nameTempl']                
-        endCntrl = cntrlCrv(name=cntrlName, obj=self.endGuide,**displaySetup)
-        pm.parentConstraint(endCntrl, j2,mo=True)
-        endCntrl.getParent().setParent(startCntrl)
-        pm.parent (j1,startCntrl.getParent(),self.neckMoveAll)
+        self.endCntrl = cntrlCrv(name=cntrlName, obj=self.endGuide,**displaySetup)
+        pm.parentConstraint(self.endCntrl, j2,mo=True)
+        self.endCntrl.getParent().setParent(self.startCntrl)
+        pm.parent (j1,self.startCntrl.getParent(),self.neckMoveAll)
+
+        #IMPLEMENTAR: guardar as posicoes dos guides ao final
+        
