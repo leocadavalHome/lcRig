@@ -550,11 +550,14 @@ class RibbonBezier:
         self.ribbonDict['size']=kwargs.pop('size', 10)
         self.ribbonDict['name']=kwargs.pop('name','ribbonBezier')
         self.ribbonDict['numJnts']=kwargs.pop('numJnts',10)
-            
+        self.ribbonDict['offsetStart']=kwargs.pop('offsetStart',0)
+        self.ribbonDict['offsetEnd']=kwargs.pop('offsetEnd',0)
+                    
         self.name = self.ribbonDict['name']
         self.size = self.ribbonDict['size']
         self.numJnts = self.ribbonDict['numJnts']
-        
+        self.offsetStart = self.ribbonDict['offsetStart']
+        self.offsetEnd = self.ribbonDict['offsetEnd']
         self.ribbonDict['cntrlSetup']={'nameTempl':'cntrl','icone':'circuloX','size':0.6,'color':(0,0,1)}       
         self.ribbonDict['cntrlTangSetup']={'nameTempl':'cntrl','icone':'bola','size':0.3,'color':(0,1,1)}        
         self.ribbonDict['cntrlExtraSetup']={'nameTempl':'cntrlExtra','icone':'circuloX','size':0.2}        
@@ -692,7 +695,8 @@ class RibbonBezier:
         #loop pra fazer os colocar o numero escolhido de joints ao longo do ribbon.
         #cria tmb node tree pro squash/stretch
         #e controles extras 
-        vIncrement=float(1.0/((self.numJnts-2)/2.0))
+        vIncrement=float((1.0-(self.offsetStart + self.offsetEnd))/((self.numJnts-2)/2.0))
+        
         print vIncrement  
         for i in range (1,(self.numJnts/2)+1):
             print i
@@ -719,7 +723,7 @@ class RibbonBezier:
             blend1B.output >> cntrl1.getParent().scaleY
             blend1B.output >> cntrl1.getParent().scaleZ  
             #expressao que le a rampa para setar valores da escala de cada joint quando fizer squash/stretch        
-            expre1=expre1+"$color = `colorAtPoint -o RGB -u "+str ((i-1)*vIncrement)+" -v 0.5 "+ramp1.name()+" `;$output["+str (i)+"] = $color[0];"+blend1A.name()+".attributesBlender=$output["+str (i)+"];"            
+            expre1=expre1+"$color = `colorAtPoint -o RGB -u "+str (self.offsetStart+(i-1)*vIncrement)+" -v 0.5 "+ramp1.name()+" `;$output["+str (i)+"] = $color[0];"+blend1A.name()+".attributesBlender=$output["+str (i)+"];"            
             
             #cria estrutura pra superficie 2       
             pm.select (cl=True)
@@ -744,11 +748,11 @@ class RibbonBezier:
             blend2B.output >> cntrl2.getParent().scaleZ
             #expressao que le a rampa para setar valores da escala de cada joint quando fizer squash/stretch           
                        
-            expre2=expre2+"$color = `colorAtPoint -o RGB -u "+str ((i-1)*vIncrement)+" -v 0.5 "+ramp2.name()+" `;$output["+str (i)+"] = $color[0];"+blend2A.name()+".attributesBlender=$output["+str (i)+"];"           
+            expre2=expre2+"$color = `colorAtPoint -o RGB -u "+str (self.offsetStart+(i-1)*vIncrement)+" -v 0.5 "+ramp2.name()+" `;$output["+str (i)+"] = $color[0];"+blend2A.name()+".attributesBlender=$output["+str (i)+"];"           
             
             #prende joints nas supeficies com follicules
-            foll1= self.attachObj (cntrl1.getParent(), bendSurf1[0], ((i-1)*vIncrement), 0.5, 4)
-            foll2= self.attachObj (cntrl2.getParent(), bendSurf2[0], ((i-1)*vIncrement), 0.5, 4)
+            foll1= self.attachObj (cntrl1.getParent(), bendSurf1[0], self.offsetStart+(i-1)*vIncrement, 0.5, 4)
+            foll2= self.attachObj (cntrl2.getParent(), bendSurf2[0], self.offsetStart+(i-1)*vIncrement, 0.5, 4)
             
             pm.parent (cntrl1.getParent(), cntrl2.getParent(),extraCntrlsGrp)
             pm.parent (jnt1, jnt2, skinJntsGrp)
@@ -1431,11 +1435,15 @@ class RibbonBezierSimple:
         self.ribbonDict['size']=kwargs.pop('size', 5)
         self.ribbonDict['name']=kwargs.pop('name','ribbonBezier')
         self.ribbonDict['numJnts']=kwargs.pop('numJnts',5)
-
+        self.ribbonDict['offsetStart']=kwargs.pop('offsetStart',0)
+        self.ribbonDict['offsetEnd']=kwargs.pop('offsetEnd',0)
+        
+            
         self.name = self.ribbonDict['name']
         self.size = self.ribbonDict['size']
         self.numJnts = self.ribbonDict['numJnts']
-        
+        self.offsetStart  =self.ribbonDict['offsetStart']
+        self.offsetEnd  =self.ribbonDict['offsetEnd']
         self.ribbonDict['cntrlSetup']={'nameTempl':'cntrl','icone':'circuloX','size':0.6,'color':(0,0,1)}       
         self.ribbonDict['cntrlTangSetup']={'nameTempl':'cntrl','icone':'bola','size':0.3,'color':(0,1,1)}        
         self.ribbonDict['cntrlExtraSetup']={'nameTempl':'cntrlExtra','icone':'circuloX','size':0.2}        
@@ -1567,10 +1575,10 @@ class RibbonBezierSimple:
         #loop pra fazer os colocar o numero escolhido de joints ao longo do ribbon.
         #cria tmb node tree pro squash/stretch
         #e controles extras 
-        vIncrement=float(1.0/(self.numJnts-1))
+        vIncrement=float((1.0-(self.offsetStart + self.offsetEnd))/(self.numJnts-1))
         print vIncrement 
         for i in range (1,self.numJnts+1):
-            print (i-1)*vIncrement
+            print (self.offsetStart+(i-1)*vIncrement)
             #cria estrutura pra superficie 1
             pm.select (cl=True)
             jnt1 = pm.joint (p=(0,0,0))
@@ -1593,10 +1601,10 @@ class RibbonBezierSimple:
             blend1B.output >> cntrl1.getParent().scaleY
             blend1B.output >> cntrl1.getParent().scaleZ  
             #expressao que le a rampa para setar valores da escala de cada joint quando fizer squash/stretch        
-            expre1=expre1+"$color = `colorAtPoint -o RGB -u "+str ((i-1)*vIncrement)+" -v 0.5 "+ramp1.name()+" `;$output["+str (i)+"] = $color[0];"+blend1A.name()+".attributesBlender=$output["+str (i)+"];"            
+            expre1=expre1+"$color = `colorAtPoint -o RGB -u "+str (self.offsetStart+(i-1)*vIncrement)+" -v 0.5 "+ramp1.name()+" `;$output["+str (i)+"] = $color[0];"+blend1A.name()+".attributesBlender=$output["+str (i)+"];"            
                
             #prende joints nas supeficies com follicules
-            foll1= self.attachObj (cntrl1.getParent(), bendSurf1[0], (i-1)*vIncrement , 0.5, 4)
+            foll1= self.attachObj (cntrl1.getParent(), bendSurf1[0], self.offsetStart+(i-1)*vIncrement , 0.5, 4)
             
             pm.parent (cntrl1.getParent(),extraCntrlsGrp)
             pm.parent (jnt1, skinJntsGrp)

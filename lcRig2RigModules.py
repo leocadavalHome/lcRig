@@ -1112,7 +1112,8 @@ class Spine:
         #dicionario q determina a aparencia dos controles
         self.spineDict={'name':name, 'axis':axis, 'flipAxis':flipAxis}
         self.spineDict['moveallSetup']={'nameTempl':self.name+'MoveAll', 'icone':'circuloX','size':1.8,'color':(1,1,0) }    
-        self.spineDict['spine0CntrlSetup'] = {'nameTempl':self.name+'spine0', 'icone':'circuloY','size':4,'color':(0,0,1) }    
+        self.spineDict['hipCntrlSetup'] = {'nameTempl':self.name+'Hip', 'icone':'circuloY','size':4,'color':(0,0,1) }
+        self.spineDict['spineFkCntrlSetup'] = {'nameTempl':self.name+'SpineFk', 'icone':'circuloY','size':2,'color':(0,0,1) }      
         self.spineDict['startFkCntrlSetup'] = {'nameTempl':self.name+'StartFk', 'icone':'cubo','size':1,'color':(0,1,0)}
         self.spineDict['midFkOffsetCntrlSetup'] = {'nameTempl':self.name+'MidFkOff', 'icone':'circuloY', 'size':2, 'color':(1,1,0) }
         self.spineDict['midFkCntrlSetup'] = {'nameTempl':self.name+'MidFk', 'icone':'cubo', 'size':1, 'color':(0,1,0) }
@@ -1166,14 +1167,19 @@ class Spine:
         spineRibbon=None
         
         #cria controles fk com nomes e setagem de display vindas do spineDict
-        displaySetup= self.spineDict['spine0CntrlSetup'].copy()
+        displaySetup= self.spineDict['hipCntrlSetup'].copy()
         cntrlName = displaySetup['nameTempl'] 
-        self.spine0FkCntrl = cntrlCrv(name=cntrlName , obj=self.startGuide,**displaySetup) 
+        self.hipCntrl = cntrlCrv(name=cntrlName , obj=self.startGuide,**displaySetup) 
+
+        displaySetup= self.spineDict['spineFkCntrlSetup'].copy()
+        cntrlName = displaySetup['nameTempl'] 
+        self.spineFkCntrl = cntrlCrv(name=cntrlName , obj=self.startGuide,**displaySetup) 
+        self.spineFkCntrl.getParent().setParent(self.hipCntrl)
         
         displaySetup= self.spineDict['startFkCntrlSetup'].copy()
         cntrlName = displaySetup['nameTempl']        
         self.startFkCntrl = cntrlCrv(name=cntrlName, obj=self.startGuide,**displaySetup)
-        self.startFkCntrl.getParent().setParent(self.spine0FkCntrl)
+        self.startFkCntrl.getParent().setParent(self.hipCntrl)
         
         displaySetup= self.spineDict['midFkCntrlSetup'].copy()
         cntrlName = displaySetup['nameTempl']        
@@ -1183,7 +1189,7 @@ class Spine:
         cntrlName = displaySetup['nameTempl']                
         self.midFkOffsetCntrl = cntrlCrv(name=cntrlName, obj=self.midGuide,**displaySetup) #esse controle faz o offset do ribbon e permanece orientado corretamente
         self.midFkOffsetCntrl.getParent().setParent(self.midFkCntrl)
-        self.midFkCntrl.getParent().setParent(self.startFkCntrl)
+        self.midFkCntrl.getParent().setParent(self.spineFkCntrl)
         
         displaySetup= self.spineDict['endFkCntrlSetup'].copy()
         cntrlName = displaySetup['nameTempl']                
@@ -1194,7 +1200,8 @@ class Spine:
         displaySetup= self.spineDict['startIkCntrlSetup'].copy()
         cntrlName = displaySetup['nameTempl']
         self.startIkCntrl = cntrlCrv(name=cntrlName, obj=self.startGuide,**displaySetup)
-
+        self.startIkCntrl.getParent().setParent(self.hipCntrl)
+        
         displaySetup= self.spineDict['midIkCntrlSetup'].copy()
         cntrlName = displaySetup['nameTempl']
         self.midIkCntrl = cntrlCrv(name=cntrlName, obj=self.midGuide,**displaySetup)
@@ -1202,7 +1209,8 @@ class Spine:
         displaySetup= self.spineDict['endIkCntrlSetup'].copy()
         cntrlName = displaySetup['nameTempl']
         self.endIkCntrl = cntrlCrv(name=cntrlName, obj=self.endGuide,**displaySetup)
-        
+        self.endIkCntrl.getParent().setParent(self.hipCntrl)    
+            
         #Cria os joints orientados em X down
         start=pm.xform(self.startGuide,q=True,t=True,ws=True)
         startTip=pm.xform(self.startTipGuide,q=True,t=True,ws=True)
@@ -1277,7 +1285,7 @@ class Spine:
         if abs(dot)>.95:
             Z=om.MVector(0,-1,0)
  
-        spineRibbon = RibbonBezierSimple(name=self.name+'Ribbon_',size=AB.length())
+        spineRibbon = RibbonBezierSimple(name=self.name+'Ribbon_',size=AB.length(), offsetStart=0.05, offsetEnd=0.05)
         spineRibbon.doRig()
         
         #cria o sistema que vai orientar o controle do meio por calculo vetorial
@@ -1328,7 +1336,7 @@ class Spine:
         self.spineMoveall=pm.group(n=cntrlName, em=True)
         
         #e parenteia todo mundo
-        pm.parent (twistExtractor1.extractorGrp, twistExtractor2.extractorGrp, spineRibbon.moveall, self.startIkCntrl.getParent(),self.midIkCntrl.getParent(),self.endIkCntrl.getParent(),self.spine0FkCntrl.getParent(), self.spineMoveall)
+        pm.parent (twistExtractor1.extractorGrp, twistExtractor2.extractorGrp, spineRibbon.moveall,self.midIkCntrl.getParent(),self.hipCntrl.getParent(), self.spineMoveall)
 
 
         #conecta os twist extractors nos twists do ribbon
@@ -1357,7 +1365,8 @@ class Spine:
         ikfkCond2.colorIfTrueR.set (1)
         ikfkCond2.colorIfFalseR.set (0)
         ikfkCond2.outColorR >> self.startFkCntrl.getParent().visibility
-
+        ikfkCond2.outColorR >> self.spineFkCntrl.getParent().visibility
+        
         #blend dos constraints         
         weightAttr = cns1.target.connections(p=True, t='parentConstraint') #descobre parametros
         self.spineMoveall.ikfk >> weightAttr[1]
