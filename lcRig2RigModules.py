@@ -1113,7 +1113,7 @@ class Spine:
         self.spineDict={'name':name, 'axis':axis, 'flipAxis':flipAxis}
         self.spineDict['moveallSetup']={'nameTempl':self.name+'MoveAll', 'icone':'circuloX','size':1.8,'color':(1,1,0) }    
         self.spineDict['hipCntrlSetup'] = {'nameTempl':self.name+'Hip', 'icone':'circuloY','size':4,'color':(0,0,1) }
-        self.spineDict['spineFkCntrlSetup'] = {'nameTempl':self.name+'SpineFk', 'icone':'circuloY','size':2,'color':(0,0,1) }      
+        self.spineDict['spineFkCntrlSetup'] = {'nameTempl':self.name+'SpineFk', 'icone':'circuloY','size':2,'color':(0,1,0) }      
         self.spineDict['startFkCntrlSetup'] = {'nameTempl':self.name+'StartFk', 'icone':'cubo','size':1,'color':(0,1,0)}
         self.spineDict['midFkOffsetCntrlSetup'] = {'nameTempl':self.name+'MidFkOff', 'icone':'circuloY', 'size':2, 'color':(1,1,0) }
         self.spineDict['midFkCntrlSetup'] = {'nameTempl':self.name+'MidFk', 'icone':'cubo', 'size':1, 'color':(0,1,0) }
@@ -1399,34 +1399,41 @@ class Chain:
         self.axis=axis
         self.flipAxis=flipAxis
         self.name=name
-        self.chainGuideDict={}
+        self.chainGuideDict={'moveall':[0,0,0]}
         self.numDiv=numDiv
-        self.chainGuideMoveall={'moveall':[0,0,0]}
         for i in range (self.numDiv):
             self.chainGuideDict['guide'+str(i+1)]=[0+i,0,0]
         #parametros de aparencia dos controles
         self.chainDict={'name':name, 'axis':axis, 'flipAxis':flipAxis}
         self.chainDict['moveAllCntrlSetup']={'nameTempl':self.name+'Moveall', 'icone':'circuloX','size':1.8,'color':(1,1,0) }    
         self.chainDict['fkCntrlSetup'] = {'nameTempl':self.name+'Fk', 'icone':'cubo','size':.8,'color':(0,1,0) }    
-
+        self.guideList=[]
+        
     def doGuide(self, **kwargs):
         self.chainGuideDict.update(kwargs)
         
         #apaga se existir
         cntrlName=self.chainDict['moveAllCntrlSetup']['nameTempl']+'_guide'
+
         if pm.objExists(cntrlName):
             pm.delete (cntrlName)
         self.chainGuideMoveall=pm.group(n=cntrlName, em=True)
 
         self.guideList=[]
-        for i in range(len(self.chainGuideDict.keys())):
+        for i in range(len(self.chainGuideDict.keys())-1):
+            print i
             guideName= self.name+str(i)+'_guide'
             guide= pm.spaceLocator (n=guideName,p=(0,0,0))
             self.guideList.append (guide)
-            pm.xform(guide, t=self.chainGuideDict['guide'+str(i+1)], ws=True)
+            print self.chainGuideDict
+            print self.chainGuideDict['guide'+str(i+1)]
+            guidePos = self.chainGuideDict['guide'+str(i+1)]
+            pm.xform(guide, t=guidePos, ws=True)
             pm.parent(guide, self.chainGuideMoveall)
-
-        self.chainGuideMoveall.translate.set (self.chainGuideMoveall['moveall'])
+            print 'ok'
+        print 'okfim'
+        print self.chainGuideDict['moveall']
+        self.chainGuideMoveall.translate.set (self.chainGuideDict['moveall'])
                    
     def doRig(self):
         # se nao tiver guide faz um padrao

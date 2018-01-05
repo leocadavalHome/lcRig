@@ -841,11 +841,11 @@ class RibbonBezier:
     def connectToLimb(self,limbObject): 
         #seta as variaveis locais com valores dos dicionarios dos objetos                 
         ribbonMoveAll = self.ribbonDict['ribbonMoveAll']
-        limbMoveAll = limbObject.limbDict['limbMoveAll']
-        limbJoint1 = limbObject.limbDict['joint1']
-        limbJoint2 = limbObject.limbDict['joint2']
-        limbJoint3 = limbObject.limbDict['joint3']
-        limbJoint4 = limbObject.limbDict['joint4']
+        limbMoveAll = limbObject.limbMoveAll
+        limbJoint1 = limbObject.startJnt
+        limbJoint2 = limbObject.midJnt
+        limbJoint3 = limbObject.endJnt
+        limbJoint4 = limbObject.handJnt
         ribbonEndCntrl = self.ribbonDict['cntrl0']
         ribbonMidCntrl = self.ribbonDict['cntrl3']
         ribbonStartCntrl = self.ribbonDict['cntrl6']
