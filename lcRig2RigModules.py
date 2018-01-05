@@ -86,7 +86,36 @@ class Limb():
         pm.aimConstraint(self.endGuide,arrow, weight=1, aimVector=(1, 0 ,0) , upVector=(0, 0, -1),worldUpObject=self.midGuide, worldUpType='object')
 
         self.limbGuideMoveall.translate.set( self.limbGuideDict['moveall'])
-                     
+
+    def mirrorConnectGuide(self, limb):
+        if not self.limbGuideMoveall:
+            self.doGuide()        
+        if not limb.limbGuideMoveall:
+            limb.doGuide()
+
+        self.mirrorGuide= pm.group (em=True, n=self.name+'MirrorGuide_grp')        
+        self.limbGuideMoveall.setParent (self.mirrorGuide)
+        self.mirrorGuide.scaleX.set (-1)
+        self.mirrorGuide.template.set (1)   
+        
+        limb.limbGuideMoveall.translate >>  self.limbGuideMoveall.translate
+        limb.limbGuideMoveall.rotate >>  self.limbGuideMoveall.rotate
+        limb.limbGuideMoveall.scale >>  self.limbGuideMoveall.scale
+        limb.startGuide.translate >>  self.startGuide.translate
+        limb.startGuide.rotate >>  self.startGuide.rotate
+        limb.startGuide.scale >>  self.startGuide.scale
+        limb.midGuide.translate >>  self.midGuide.translate
+        limb.midGuide.rotate >>  self.midGuide.rotate
+        limb.midGuide.scale >>  self.midGuide.scale
+        limb.endGuide.translate >>  self.endGuide.translate
+        limb.endGuide.rotate >>  self.endGuide.rotate
+        limb.endGuide.scale >>  self.endGuide.scale
+
+        if limb.flipAxis:
+            self.flipAxis=False
+        else:
+            self.flipAxis=True
+                      
     def doRig(self):
         if not self.limbGuideMoveall:
             self.doGuide()
@@ -724,7 +753,7 @@ class Hand:
         self.handDict['fingers']={}
         self.handDict['moveall']=[0,0,0]
         for i in range(fingerNum):
-            fingerName='dedo'+str(i)#IMPLEMENTAR nomes dos dedos            
+            fingerName=self.name+'dedo'+str(i)#IMPLEMENTAR nomes dos dedos            
             self.handDict['fingers']['finger'+str(i+1)] = {'name':fingerName,
                                                 'fingerGuideDict':{'moveall':[0,0,(((fingerNum/2)*-.3)+(i*.3))],'palm':[0,0,0],'base':[1,0,0],'tip':[2,0,0], 'fold1':[0,0.05,0],'fold2':[0,0,0]},
                                                 'instance':None
@@ -749,6 +778,51 @@ class Hand:
             f.doGuide(**dict)
             pm.parent (f.fingerGuideMoveall,self.handGuideMoveall)
 
+    def mirrorConnectGuide(self, hand):
+        if not self.handGuideMoveall:
+            self.doGuide()        
+        if not hand.handGuideMoveall:
+            hand.doGuide()
+
+        self.mirrorGuide= pm.group (em=True, n=self.name+'MirrorGuide_grp')        
+        self.handGuideMoveall.setParent (self.mirrorGuide)
+        self.mirrorGuide.scaleX.set (-1)
+        self.mirrorGuide.template.set (1)   
+        
+        hand.handGuideMoveall.translate >>  self.handGuideMoveall.translate
+        hand.handGuideMoveall.rotate >>  self.handGuideMoveall.rotate
+        hand.handGuideMoveall.scale >>  self.handGuideMoveall.scale
+        
+        for a, b in zip(self.handDict['fingers'], hand.handDict['fingers']):
+            f_mirror = self.handDict['fingers'][a]['instance']   
+            f_origin = hand.handDict['fingers'][b]['instance']  
+
+            f_origin.fingerGuideMoveall.translate >> f_mirror.fingerGuideMoveall.translate
+            f_origin.fingerGuideMoveall.rotate >> f_mirror.fingerGuideMoveall.rotate
+            f_origin.fingerGuideMoveall.scale >> f_mirror.fingerGuideMoveall.scale
+            f_origin.palmGuide.translate >> f_mirror.palmGuide.translate
+            f_origin.palmGuide.rotate >> f_mirror.palmGuide.rotate
+            f_origin.palmGuide.scale >> f_mirror.palmGuide.scale
+            f_origin.baseGuide.translate >> f_mirror.baseGuide.translate
+            f_origin.baseGuide.rotate >> f_mirror.baseGuide.rotate
+            f_origin.baseGuide.scale >> f_mirror.baseGuide.scale
+            f_origin.tipGuide.translate >> f_mirror.tipGuide.translate
+            f_origin.tipGuide.rotate >> f_mirror.tipGuide.rotate
+            f_origin.tipGuide.scale >> f_mirror.tipGuide.scale
+            f_origin.fold1Guide.translate >> f_mirror.fold1Guide.translate
+            f_origin.fold1Guide.rotate >> f_mirror.fold1Guide.rotate
+            f_origin.fold1Guide.scale >> f_mirror.fold1Guide.scale
+            if self.folds==2:
+                f_origin.fold2Guide.translate >> f_mirror.fold1Guide.translate
+                f_origin.fold2Guide.rotate >> f_mirror.fold1Guide.rotate
+                f_origin.fold2Guide.scale >> f_mirror.fold1Guide.scale  
+                                                      
+        #if hand.flipAxis:
+            #self.flipAxis=False
+        #else:
+            #self.flipAxis=True
+
+
     def doRig(self, **kwargs):
         if not self.handGuideMoveall:
             self.doGuide()
@@ -760,6 +834,7 @@ class Hand:
         pm.xform (self.handMoveall, ws=True, t=self.handDict['moveall'])
         for finger in self.handDict['fingers']:                                                                                  
             f = self.handDict['fingers'][finger]['instance']
+            f.flipAxis = self.flipAxis
             dict=self.handDict['fingers'][finger]['fingerGuideDict']
             f.doRig()
             pm.parent (f.fingerMoveall, self.handMoveall)
@@ -1399,6 +1474,7 @@ class Chain:
         self.axis=axis
         self.flipAxis=flipAxis
         self.name=name
+        self.chainGuideMoveall=None
         self.chainGuideDict={'moveall':[0,0,0]}
         self.numDiv=numDiv
         for i in range (self.numDiv):
