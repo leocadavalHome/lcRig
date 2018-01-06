@@ -291,7 +291,8 @@ def cntrlCrv(name='cntrl', obj=None, connType=None,offsets=0, **kwargs):
         matrix =pm.xform (cntrlledObj, q=True,  ws=True ,m=True) 
     
         pm.xform (grp, ws=True,  m=matrix)
-        
+        pm.makeIdentity( grp, a = False, t = False, r = False, s = True, n=False ) ## garante q a escala nao fique negativa
+                 
         if connType=='parent':
             cntrlledObj.setParent (crv)
         

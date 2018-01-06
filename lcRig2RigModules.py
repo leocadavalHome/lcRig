@@ -35,7 +35,6 @@ class Limb():
         self.flipAxis = flipAxis
         self.axis = axis
         self.handJoint = handJoint
-        self.limbGuideDict = {'moveall':[0,0,0],'start':[0,0,0], 'mid':[3,0,-1],'end':[6,0,0], 'hand':[7,0,0]} 
         self.startGuide=None   
         self.endGuide=None   
         self.midGuide=None   
@@ -54,10 +53,10 @@ class Limb():
         #self.limbDict['nodeTree'] = {}
         #self.limbDict['nameConventions'] = None
 
-    def doGuide(self,**kwargs): 
+    def doGuide(self,**kwargs):        
+        self.limbGuideDict = {'moveall':[0,0,0],'start':[0,0,0], 'mid':[3,0,-1],'end':[6,0,0], 'hand':[7,0,0]}  
         self.limbGuideDict.update(kwargs)
         ## cria guia se não existir  
-        #IMPLEMENTAR: se nao tiver valores pro guideDict, faz guide padrao
         if pm.objExists(self.name+'Moveall_guide'):
             pm.delete (self.name+'Moveall_guide')
                 
@@ -512,8 +511,6 @@ class Finger:
         self.tipGuide=None
         self.fold1Guide=None
         self.fold2Guide=None
-        self.fingerGuideDict={'moveall':[0,0,0],'palm':[0,0,0],'base':[1,0,0],'tip':[2,0,0], 'fold1':[0,0.05,0],'fold2':[0,0,0]}
-        self.fingerGuideDict.update(kwargs) # atualiza com o q foi entrado
         
         ##setaqens de aparencia dos controles
         self.fingerDict={'name':name,'folds':folds, 'axis':axis, 'flipAxis':flipAxis}
@@ -526,7 +523,7 @@ class Finger:
 
     #guide 
     def doGuide(self, **kwargs):
-
+        self.fingerGuideDict={'moveall':[0,0,0],'palm':[0,0,0],'base':[1,0,0],'tip':[2,0,0], 'fold1':[0,0.05,0],'fold2':[0,0,0]}
         self.fingerGuideDict.update(kwargs) # atualiza com o q foi entrado
         
         guideName= self.fingerDict['moveallCntrlSetup']['nameTempl']+'_guide'
@@ -813,14 +810,15 @@ class Hand:
             f_origin.fold1Guide.rotate >> f_mirror.fold1Guide.rotate
             f_origin.fold1Guide.scale >> f_mirror.fold1Guide.scale
             if self.folds==2:
-                f_origin.fold2Guide.translate >> f_mirror.fold1Guide.translate
-                f_origin.fold2Guide.rotate >> f_mirror.fold1Guide.rotate
-                f_origin.fold2Guide.scale >> f_mirror.fold1Guide.scale  
+                print '2 folds'
+                f_origin.fold2Guide.translate >> f_mirror.fold2Guide.translate
+                f_origin.fold2Guide.rotate >> f_mirror.fold2Guide.rotate
+                f_origin.fold2Guide.scale >> f_mirror.fold2Guide.scale  
                                                       
-        #if hand.flipAxis:
-            #self.flipAxis=False
-        #else:
-            #self.flipAxis=True
+        if hand.flipAxis:
+            self.flipAxis=False
+        else:
+            self.flipAxis=True
 
 
     def doRig(self, **kwargs):
@@ -884,7 +882,7 @@ class Foot:
     def doGuide(self,**kwargs):
         #atualiza o footGuideDict com o q for entrado aqui nesse metodo
         #ex: doGuide (center=[0,0,0], tip=[10,10,0]
-         
+        self.footGuideDict={'moveall':[0,0,0],'center':[0,0,0],'tip':[3,0,0],'heel':[-1,0,0],'ankle':[0,1,0],'ball':[2,0.5,0],'in':[2,0,-1],'out':[2,0,1]} 
         self.footGuideDict.update(kwargs)
                 
         guideName=self.footDict['moveallCntrlSetup']['nameTempl']+'_guide' 
@@ -939,7 +937,56 @@ class Foot:
         pm.parent (self.centerGuide,self.tipGuide,self.heelGuide,self.ankleGuide,self.ballGuide,self.inGuide,self.outGuide, self.footGuideMoveall)
         
         self.footGuideMoveall.translate.set(self.footGuideDict['moveall'])
-                
+
+    def mirrorConnectGuide(self,foot):
+        if not self.footGuideMoveall:
+            self.doGuide()
+        if not foot.footGuideMoveall:
+            foot.doGuide()
+
+        self.mirrorGuide= pm.group (em=True, n=self.name+'MirrorGuide_grp')        
+        self.footGuideMoveall.setParent (self.mirrorGuide)
+        self.mirrorGuide.scaleX.set (-1)
+        self.mirrorGuide.template.set (1)   
+        
+        foot.footGuideMoveall.translate >>  self.footGuideMoveall.translate
+        foot.footGuideMoveall.rotate >>  self.footGuideMoveall.rotate
+        foot.footGuideMoveall.scale >>  self.footGuideMoveall.scale
+
+        foot.centerGuide.translate >>  self.centerGuide.translate
+        foot.centerGuide.rotate >>  self.centerGuide.rotate
+        foot.centerGuide.scale >>  self.centerGuide.scale
+
+        foot.tipGuide.translate >>  self.tipGuide.translate
+        foot.tipGuide.rotate >>  self.tipGuide.rotate
+        foot.tipGuide.scale >>  self.tipGuide.scale
+
+        foot.heelGuide.translate >>  self.heelGuide.translate
+        foot.heelGuide.rotate >>  self.heelGuide.rotate
+        foot.heelGuide.scale >>  self.heelGuide.scale
+
+        foot.ankleGuide.translate >>  self.ankleGuide.translate
+        foot.ankleGuide.rotate >>  self.ankleGuide.rotate
+        foot.ankleGuide.scale >>  self.ankleGuide.scale
+
+        foot.ballGuide.translate >>  self.ballGuide.translate
+        foot.ballGuide.rotate >>  self.ballGuide.rotate
+        foot.ballGuide.scale >>  self.ballGuide.scale
+
+        foot.inGuide.translate >>  self.inGuide.translate
+        foot.inGuide.rotate >>  self.inGuide.rotate
+        foot.inGuide.scale >>  self.inGuide.scale
+
+        foot.outGuide.translate >>  self.outGuide.translate
+        foot.outGuide.rotate >>  self.outGuide.rotate
+        foot.outGuide.scale >>  self.outGuide.scale
+
+        if foot.flipAxis:
+            self.flipAxis=False
+        else:
+            self.flipAxis=True
+        
+                       
     def doRig(self):
         if not self.footGuideMoveall:
             self.doGuide()
@@ -1009,6 +1056,7 @@ class Foot:
         cntrlName = displaySetup['nameTempl']        
         baseCntrl=cntrlCrv(name=cntrlName,obj=self.centerGuide, **displaySetup)
         pm.xform (baseCntrl, rp=ankle, ws=True)
+        print ankle
         baseCntrl.addAttr ('extraRollCntrls',min=0, max=1, dv=0, k=1)
         
         #slidePivot
@@ -1493,24 +1541,45 @@ class Chain:
 
         if pm.objExists(cntrlName):
             pm.delete (cntrlName)
+
         self.chainGuideMoveall=pm.group(n=cntrlName, em=True)
 
         self.guideList=[]
         for i in range(len(self.chainGuideDict.keys())-1):
-            print i
             guideName= self.name+str(i)+'_guide'
             guide= pm.spaceLocator (n=guideName,p=(0,0,0))
             self.guideList.append (guide)
-            print self.chainGuideDict
-            print self.chainGuideDict['guide'+str(i+1)]
             guidePos = self.chainGuideDict['guide'+str(i+1)]
             pm.xform(guide, t=guidePos, ws=True)
             pm.parent(guide, self.chainGuideMoveall)
-            print 'ok'
-        print 'okfim'
-        print self.chainGuideDict['moveall']
         self.chainGuideMoveall.translate.set (self.chainGuideDict['moveall'])
-                   
+
+    def mirrorConnectGuide(self,chain):
+
+        if not self.chainGuideMoveall:
+            self.doGuide()        
+        if not chain.chainGuideMoveall:
+            chain.doGuide()
+            
+        self.mirrorGuide= pm.group (em=True, n=self.name+'MirrorGuide_grp')        
+        self.chainGuideMoveall.setParent (self.mirrorGuide)
+        self.mirrorGuide.scaleX.set (-1)
+        self.mirrorGuide.template.set (1)
+
+        chain.chainGuideMoveall.translate >>  self.chainGuideMoveall.translate
+        chain.chainGuideMoveall.rotate >>  self.chainGuideMoveall.rotate
+        chain.chainGuideMoveall.scale >>  self.chainGuideMoveall.scale
+        
+        for origin,mirror in zip (chain.guideList, self.guideList):
+            origin.translate >>  mirror.translate
+            origin.rotate >>  mirror.rotate
+            origin.scale >>  mirror.scale
+        
+        if chain.flipAxis:
+            self.flipAxis=False
+        else:
+            self.flipAxis=True            
+                               
     def doRig(self):
         # se nao tiver guide faz um padrao
         if not self.chainGuideMoveall:
