@@ -450,7 +450,33 @@ def makeJoint(name='joint', matrix=None, obj=None, connectToLast=False):
     pm.makeIdentity (jnt, apply=True, r=1, t=0, s=0, n=0, pn=0)
     return jnt       
         
-        
+def saveCntrlsShape(filename= 'd:/cntrls.shp'):
+	userSel = pm.ls (sl=True)
+	sel=[x for x in userSel if '_cntrl' in x.name()]
+	cntrlShapeDict={}
+	
+	for obj in sel:
+	    print obj
+	    if pm.nodeType (obj.getShape())=='nurbsCurve':
+	        pointList=[]
+	        for i in range (len (obj.cv)):
+	            pointList.append (pm.pointPosition (obj.cv[i], l=True))
+	            cntrlShapeDict[obj]=pointList
+	with open(filename, 'wb') as f:
+	    pickle.dump(cntrlShapeDict, f)    
+
+def loadCntrlShape(filename= 'd:/cntrls.shp'):	
+	cntrlShapeDict={}
+	print cntrlShapeDict  
+		    
+	with open(filename, 'rb') as f:
+	    cntrlShapeDict  = pickle.load(f)
+	print cntrlShapeDict    
+	for obj in cntrlShapeDict:
+	    print obj
+	    for i in range (len (obj.cv)):
+	        pm.xform (obj.cv[i], t=cntrlShapeDict[obj][i])
+	                
 class twistExtractor:
     """
         Cria uma estrutura para calcular o twist de um joint 
@@ -547,6 +573,8 @@ class RibbonBezier:
     def __init__( self, **kwargs ):
         
         self.ribbonDict = {}
+        
+        
                     
         self.ribbonDict['size']=kwargs.pop('size', 10)
         self.ribbonDict['name']=kwargs.pop('name','ribbonBezier')
@@ -559,9 +587,16 @@ class RibbonBezier:
         self.numJnts = self.ribbonDict['numJnts']
         self.offsetStart = self.ribbonDict['offsetStart']
         self.offsetEnd = self.ribbonDict['offsetEnd']
-        self.ribbonDict['cntrlSetup']={'nameTempl':'cntrl','icone':'circuloX','size':0.6,'color':(0,0,1)}       
-        self.ribbonDict['cntrlTangSetup']={'nameTempl':'cntrl','icone':'bola','size':0.3,'color':(0,1,1)}        
-        self.ribbonDict['cntrlExtraSetup']={'nameTempl':'cntrlExtra','icone':'circuloX','size':0.2}        
+        
+        self.jntSulfix='_jnt'
+        self.ribbonDict['moveallSetup']={'nameTempl':self.name+'Moveall'}    
+        self.ribbonDict['noMoveSetup']={'nameTempl':self.name+'NoMove'}    
+
+        self.ribbonDict['cntrlSetup']={'nameTempl':self.name+'Pos','icone':'circuloX','size':0.6,'color':(0,0,1)}       
+        self.ribbonDict['cntrlTangSetup']={'nameTempl':self.name+'Tang','icone':'bola','size':0.3,'color':(0,1,1)}        
+        self.ribbonDict['cntrlExtraSetup']={'nameTempl':self.name+'Extra','icone':'circuloX','size':0.2}        
+
+        self.ribbonDict['jntSetup']={'nameTempl':self.name+'Joint','icone':'circuloX','size':0.2}        
 
            
     def doRig(self): 
@@ -569,13 +604,13 @@ class RibbonBezier:
         cntrlList =[]
         locList =[]
         
-        if pm.objExists(self.name+'NoMove'):
-            pm.delete (self.name+'NoMove')
-        if pm.objExists(self.name+'MoveAll'):
-            pm.delete (self.name+'MoveAll')
+        if pm.objExists(self.ribbonDict['moveallSetup']['nameTempl']):
+            pm.delete (self.ribbonDict['moveallSetup']['nameTempl'])
+        if pm.objExists(self.ribbonDict['noMoveSetup']['nameTempl']):
+            pm.delete (self.ribbonDict['noMoveSetup']['nameTempl'])
                            
         ###Estrutura que nao deve ter transformacao       
-        noMoveSpace = pm.group (empty=True, n=self.name+'NoMove')
+        noMoveSpace = pm.group (empty=True, n=self.ribbonDict['noMoveSetup']['nameTempl'])
         noMoveSpace.visibility.set(0)
         noMoveSpace.translate.set(self.size*-0.5,0,0)    
         noMoveBend1 = pm.nurbsPlane ( p=(self.size*-0.25,0,0), ax=(0,0,1), w=self.size*0.5, lr = .1 , d = 3, u =5, v =1)        
@@ -594,7 +629,7 @@ class RibbonBezier:
         pm.parent (twist1[1],twist2[1], noMoveSpace) 
         
         ###Estrutura que pode ser movida
-        cntrlsSpace = pm.group (empty=True, n=self.name+'MoveAll')
+        cntrlsSpace = pm.group (empty=True, n=self.ribbonDict['moveallSetup']['nameTempl'])
         cntrlsSpace.translate.set(self.size*-0.5,0,0)
         bendSurf1 = pm.nurbsPlane ( p=(self.size*-0.25,0,0), ax=(0,0,1), w=self.size*0.5, lr = .1 , d = 3, u =5, v =1)
         bendSurf2 = pm.nurbsPlane ( p=(self.size*0.25,0,0), ax=(0,0,1), w=self.size*0.5, lr = .1 , d = 3, u =5, v =1)   
@@ -697,14 +732,12 @@ class RibbonBezier:
         #cria tmb node tree pro squash/stretch
         #e controles extras 
         vIncrement=float((1.0-(self.offsetStart + self.offsetEnd))/((self.numJnts-2)/2.0))
-        
-        print vIncrement  
+         
         for i in range (1,(self.numJnts/2)+1):
-            print i
-            print ((i-1)*vIncrement)
             #cria estrutura pra superficie 1
             pm.select (cl=True)
-            jnt1 = pm.joint (p=(0,0,0))
+            jntName= self.ribbonDict['jntSetup']['nameTempl']+'A'+str(i)+self.jntSulfix
+            jnt1 = pm.joint (p=(0,0,0), n=jntName)
             
             displaySetup = self.ribbonDict['cntrlExtraSetup'].copy()                               
             cntrlName = displaySetup['nameTempl']+'A'+str(i) 
@@ -719,8 +752,7 @@ class RibbonBezier:
             blend1A.input[0].set (1)
             gammaCorr1.outValueX >> blend1A.input[1]
             blend1B.input[0].set(1)
-            blend1A.output >> blend1B.input[1];
-            cntrlList[3].attr('autoVolume') >> blend1B.attributesBlender
+            blend1A.output >> blend1B.input[1]; r
             blend1B.output >> cntrl1.getParent().scaleY
             blend1B.output >> cntrl1.getParent().scaleZ  
             #expressao que le a rampa para setar valores da escala de cada joint quando fizer squash/stretch        
@@ -728,7 +760,9 @@ class RibbonBezier:
             
             #cria estrutura pra superficie 2       
             pm.select (cl=True)
-            jnt2 = pm.joint (p=(0,0,0))
+            
+            jntName= self.ribbonDict['jntSetup']['nameTempl']+'B'+str(i)+self.jntSulfix
+            jnt2 = pm.joint (p=(0,0,0),n=jntName)
             
             displaySetup = self.ribbonDict['cntrlExtraSetup'].copy()                              
             cntrlName = displaySetup['nameTempl']+'B'+str(i)             
@@ -1027,7 +1061,6 @@ class RibbonStandard:
             
             #criando nodes do rbbn
             folShp = pm.createNode('follicle')
-            print folShp
             fol = folShp.getParent ()
             
             #escondendo os follicles
@@ -1133,7 +1166,6 @@ class RibbonStandard:
         #skin setup
         #print nurbs, topToSkin, midToSkin, lwrToSkin 
         skin = pm.skinCluster(topToSkin,midToSkin,lwrToSkin,nurbs,tsb=1)
-        print skin
         if self.sections == 3:
         	pm.skinPercent(skin,nurbs + '.cv[0:1][5]',tv=(topToSkin,1))
         	pm.skinPercent(skin,nurbs + '.cv[0:1][4]',tv=[(topToSkin,0.6),(midToSkin,0.4)])
@@ -1445,23 +1477,29 @@ class RibbonBezierSimple:
         self.numJnts = self.ribbonDict['numJnts']
         self.offsetStart  =self.ribbonDict['offsetStart']
         self.offsetEnd  =self.ribbonDict['offsetEnd']
-        self.ribbonDict['cntrlSetup']={'nameTempl':'cntrl','icone':'circuloX','size':0.6,'color':(0,0,1)}       
-        self.ribbonDict['cntrlTangSetup']={'nameTempl':'cntrl','icone':'bola','size':0.3,'color':(0,1,1)}        
-        self.ribbonDict['cntrlExtraSetup']={'nameTempl':'cntrlExtra','icone':'circuloX','size':0.2}        
-        
+                
+        self.jntSulfix='_jnt'
+        self.ribbonDict['moveallSetup']={'nameTempl':self.name+'Moveall'}    
+        self.ribbonDict['noMoveSetup']={'nameTempl':self.name+'NoMove'}    
+
+        self.ribbonDict['cntrlSetup']={'nameTempl':self.name+'Pos','icone':'circuloX','size':0.6,'color':(0,0,1)}       
+        self.ribbonDict['cntrlTangSetup']={'nameTempl':self.name+'Tang','icone':'bola','size':0.3,'color':(0,1,1)}        
+        self.ribbonDict['cntrlExtraSetup']={'nameTempl':self.name+'Extra','icone':'circuloX','size':0.2}        
+
+        self.ribbonDict['jntSetup']={'nameTempl':self.name+'Joint','icone':'circuloX','size':0.2}   
                    
     def doRig(self): 
         anchorList = []
         cntrlList =[]
         locList =[]
         
-        if pm.objExists(self.name+'NoMove'):
-            pm.delete (self.name+'NoMove')
-        if pm.objExists(self.name+'MoveAll'):
-            pm.delete (self.name+'MoveAll')
+        if pm.objExists(self.ribbonDict['noMoveSetup']['nameTempl']):
+            pm.delete (self.ribbonDict['noMoveSetup']['nameTempl'])
+        if pm.objExists(self.ribbonDict['moveallSetup']['nameTempl']):
+            pm.delete (self.ribbonDict['moveallSetup']['nameTempl'])
                            
         ###Estrutura que nao deve ter transformacao       
-        noMoveSpace = pm.group (empty=True, n=self.name+'NoMove')
+        noMoveSpace = pm.group (empty=True, n=self.ribbonDict['noMoveSetup']['nameTempl'])
         noMoveSpace.visibility.set(0)
         noMoveBend1 = pm.nurbsPlane ( p=(self.size*0.5,0,0), ax=(0,0,1), w=self.size, lr = 0.1 , d = 3, u =5, v =1)        
         noMoveCrvJnt = pm.curve ( bezier=True, d=3, p=[(self.size*-0.5,0,0),(self.size*-0.4,0,0),(self.size*-0.1,0,0),(0,0,0),(self.size*0.1,0,0),(self.size*0.4,0,0),(self.size*0.5,0,0)], k=[0,0,0,1,1,1,2,2,2])        
@@ -1479,7 +1517,7 @@ class RibbonBezierSimple:
         pm.parent (twist1[1], noMoveSpace) 
         
         ###Estrutura que pode ser movida
-        cntrlsSpace = pm.group (empty=True, n=self.name+'MoveAll')
+        cntrlsSpace = pm.group (empty=True, n=self.ribbonDict['moveallSetup']['nameTempl'])
         bendSurf1 = pm.nurbsPlane ( p=(self.size*-0.5,0,0), ax=(0,0,1), w=self.size*0.5, lr = .1 , d = 3, u =5, v =1)
         
         blend1 = pm.blendShape (noMoveBend1[0], bendSurf1[0])
@@ -1576,13 +1614,12 @@ class RibbonBezierSimple:
         #loop pra fazer os colocar o numero escolhido de joints ao longo do ribbon.
         #cria tmb node tree pro squash/stretch
         #e controles extras 
-        vIncrement=float((1.0-(self.offsetStart + self.offsetEnd))/(self.numJnts-1))
-        print vIncrement 
+        vIncrement=float((1.0-(self.offsetStart + self.offsetEnd))/(self.numJnts-1)) 
         for i in range (1,self.numJnts+1):
-            print (self.offsetStart+(i-1)*vIncrement)
             #cria estrutura pra superficie 1
             pm.select (cl=True)
-            jnt1 = pm.joint (p=(0,0,0))
+            jntName= self.ribbonDict['jntSetup']['nameTempl']+str(i)+self.jntSulfix
+            jnt1 = pm.joint (p=(0,0,0), n=jntName)
             
             displaySetup = self.ribbonDict['cntrlExtraSetup'].copy()                               
             cntrlName = displaySetup['nameTempl']+'A'+str(i) 
