@@ -12,7 +12,7 @@ class Limb():
             endCntrl (string): nome
             poleCntrl (string): nome
             flipAxis (boolean): se o eixo eh flipado ao longo do bone
-            handJoint (boolean): se exite joint da mao
+            lastJoint (boolean): se exite joint da mao
             axis (string:'X','Y' ou 'Z'): eixo ao longo do bone
                  
     """  
@@ -22,11 +22,11 @@ class Limb():
  
     #self.twoJoints=False RETIREI CODIGO DE ARTICULACAO DE DOIS JOINTS. PRECISA FAZER IMPLEMENTACAO COMPLETA 
                  
-    def __init__ (self,name='limb',axis='X',flipAxis=False,handJoint=True, **kwargs):
+    def __init__ (self,name='limb',axis='X',flipAxis=False,lastJoint=True, **kwargs):
 
         self.limbDict={'name':name,
                        'flipAxis':flipAxis,
-                       'handJoint':handJoint,
+                       'lastJoint':lastJoint,
                        'axis':axis } #valores default
 
         self.limbDict.update(kwargs) # atualiza com o q foi entrado
@@ -34,50 +34,74 @@ class Limb():
         self.name = name
         self.flipAxis = flipAxis
         self.axis = axis
-        self.handJoint = handJoint
+        self.lastJoint = lastJoint
         self.startGuide=None   
         self.endGuide=None   
         self.midGuide=None   
-        self.handGuide=None
+        self.lastGuide=None
         self.limbGuideMoveall=None
+
+        ##IMPLEMENTAR padroes de nome 
+        self.guideSulfix='_guide'
+        self.jntSulfix='_jnt'
+        self.jxtSulfix='_jxt'
+        self.tipJxtSulfix='Tip_jxt'
+        self.grpSulfix='_grp'
                    
         ##setups visuais dos controles
-        self.limbDict['moveAll1CntrlSetup']={'nameTempl':self.name+'moveAll1', 'icone':'circuloX','size':1.8,'color':(1,1,0) }    
+        self.limbDict['moveAll1CntrlSetup']={'nameTempl':self.name+'MoveAll1', 'icone':'circuloX','size':1.8,'color':(1,1,0) }    
         self.limbDict['ikCntrlSetup'] = {'nameTempl':self.name+'Ik', 'icone':'bola','size':1,'color':(1,1,0) }    
         self.limbDict['startCntrlSetup'] = {'nameTempl':self.name+'FkStart', 'icone':'cubo','size':0.5,'color':(0,1,0) }
         self.limbDict['midCntrlSetup'] = {'nameTempl':self.name+'FkMid', 'icone':'cubo', 'size':0.5, 'color':(0,1,0)}
         self.limbDict['endCntrlSetup'] = {'nameTempl':self.name+'FkEnd', 'icone':'cubo', 'size':0.5, 'color':(0,1,0)}
         self.limbDict['poleVecCntrlSetup'] = {'nameTempl':self.name+'PoleVec', 'icone':'bola', 'size':0.4, 'color':(1,0,0)}
 
-        ##IMPLEMENTAR padroes de nome 
+        self.limbDict['startJntSetup'] = {'nameTempl':self.name+'Start', 'size':1}
+        self.limbDict['midJntSetup'] = {'nameTempl':self.name+'Mid', 'size':1}
+        self.limbDict['endJntSetup'] = {'nameTempl':self.name+'End', 'size':1}
+        self.limbDict['lastJntSetup'] = {'nameTempl':self.name+'Last', 'size':1}
+        
+        self.limbDict['moveallGuideSetup']={'nameTempl':self.name+'MoveAll1','size':1, 'color':(1,1,0)}
+        self.limbDict['startGuideSetup'] = {'nameTempl':self.name+'Start', 'size':1, 'color':(1,1,0)}
+        self.limbDict['midGuideSetup'] = {'nameTempl':self.name+'Mid', 'size':1, 'color':(1,1,0)}
+        self.limbDict['endGuideSetup'] = {'nameTempl':self.name+'End', 'size':1, 'color':(1,1,0)}
+        self.limbDict['lastGuideSetup'] = {'nameTempl':self.name+'Last', 'size':1, 'color':(1,1,0)}
+               
         #self.limbDict['nodeTree'] = {}
         #self.limbDict['nameConventions'] = None
 
     def doGuide(self,**kwargs):        
-        self.limbGuideDict = {'moveall':[0,0,0],'start':[0,0,0], 'mid':[3,0,-1],'end':[6,0,0], 'hand':[7,0,0]}  
+        self.limbGuideDict = {'moveall':[0,0,0],'start':[0,0,0], 'mid':[3,0,-1],'end':[6,0,0], 'last':[7,0,0]}  
         self.limbGuideDict.update(kwargs)
-        ## cria guia se não existir  
-        if pm.objExists(self.name+'Moveall_guide'):
-            pm.delete (self.name+'Moveall_guide')
-                
-        self.limbGuideMoveall=pm.group(n=self.name+'Moveall_guide', em=True)
-        self.startGuide = pm.spaceLocator (n=self.name+'Start_guide', p=(0,0,0))
+        ## cria guia se não existir 
+        guideName=self.limbDict['moveallGuideSetup']['nameTempl']+self.guideSulfix
+        if pm.objExists(guideName):
+            pm.delete (guideName)                
+        self.limbGuideMoveall=pm.group(n=guideName, em=True)
+        
+        guideName=self.limbDict['startGuideSetup']['nameTempl']+self.guideSulfix
+        self.startGuide = pm.spaceLocator (n=guideName, p=(0,0,0))
         pm.xform (self.startGuide, t=self.limbGuideDict['start'], ws=True)
         self.startGuide.displayHandle.set(1)
-        self.midGuide = pm.spaceLocator (n=self.name+'Mid_guide', p=(0,0,0))
+
+        guideName=self.limbDict['midGuideSetup']['nameTempl']+self.guideSulfix
+        self.midGuide = pm.spaceLocator (n=guideName, p=(0,0,0))
         pm.xform (self.midGuide, t=self.limbGuideDict['mid'], ws=True)
         self.midGuide.displayHandle.set(1)
-        self.endGuide = pm.spaceLocator (n=self.name+'End_guide', p=(0,0,0))
+
+        guideName=self.limbDict['endGuideSetup']['nameTempl']+self.guideSulfix
+        self.endGuide = pm.spaceLocator (n=guideName, p=(0,0,0))
         pm.xform (self.endGuide, t=self.limbGuideDict['end'], ws=True)
         self.endGuide.displayHandle.set(1)
         
         pm.parent (self.startGuide, self.midGuide, self.endGuide, self.limbGuideMoveall)
                
-        if self.handJoint:
-            self.handGuide = pm.spaceLocator (n=self.name+'Hand_guide', p=(0,0,0))
-            pm.xform (self.handGuide, t=self.limbGuideDict['hand'], ws=True)
-            pm.parent (self.handGuide, self.endGuide)
-            self.handGuide.displayHandle.set(1)
+        if self.lastJoint:
+            guideName=self.limbDict['lastGuideSetup']['nameTempl']+self.guideSulfix
+            self.lastGuide = pm.spaceLocator (n=guideName, p=(0,0,0))
+            pm.xform (self.lastGuide, t=self.limbGuideDict['last'], ws=True)
+            pm.parent (self.lastGuide, self.endGuide)
+            self.lastGuide.displayHandle.set(1)
             
         #cria a curva da direcao do plano
         arrow=cntrlCrv(obj=self.startGuide,name=self.name+'PlaneDir',icone='seta', size=.35, color=(0,1,1))
@@ -92,6 +116,9 @@ class Limb():
         if not limb.limbGuideMoveall:
             limb.doGuide()
 
+        if pm.objExists(self.name+'MirrorGuide_grp'):
+            pm.delete (self.name+'MirrorGuide_grp')
+            
         self.mirrorGuide= pm.group (em=True, n=self.name+'MirrorGuide_grp')        
         self.limbGuideMoveall.setParent (self.mirrorGuide)
         self.mirrorGuide.scaleX.set (-1)
@@ -136,8 +163,8 @@ class Limb():
         B= om.MVector(p2)
         C= om.MVector(p3)
         
-        if self.handJoint:
-            p4=pm.xform (self.handGuide, q=True, t=True, ws=True)
+        if self.lastJoint:
+            p4=pm.xform (self.lastGuide, q=True, t=True, ws=True)
             D=om.MVector(p4)
         
         #Calculando a normal do plano definido pelo guide
@@ -156,7 +183,8 @@ class Limb():
         m = orientMatrix (mvector=AB,normal=n,pos=A, axis=self.axis)            
         #cria joint1
         pm.select(cl=True)
-        self.startJnt = pm.joint()
+        jntName= self.limbDict['startJntSetup']['nameTempl']+self.jntSulfix
+        self.startJnt = pm.joint(n=jntName)
         pm.xform (self.startJnt, m = m, ws=True) 
         pm.makeIdentity (self.startJnt, apply=True, r=1, t=0, s=0, n=0, pn=0)
         
@@ -164,14 +192,16 @@ class Limb():
         #criando a matriz do joint conforme a orientacao setada
         m = orientMatrix (mvector=BC,normal=n,pos=B, axis=self.axis)  
         pm.select(cl=True)
-        self.midJnt= pm.joint()
+        jntName= self.limbDict['midJntSetup']['nameTempl']+self.jntSulfix
+        self.midJnt= pm.joint(n=jntName)
         pm.xform (self.midJnt, m = m, ws=True) 
         pm.makeIdentity (self.midJnt, apply=True, r=1, t=0, s=0, n=0, pn=0)
         
         #cria joint3
         #aqui so translada o joint, usa a mesma orientacao
         pm.select(cl=True)
-        self.endJnt=pm.joint()
+        jntName= self.limbDict['endJntSetup']['nameTempl']+self.jntSulfix
+        self.endJnt=pm.joint(n=jntName)
         pm.xform (self.endJnt, m = m, ws=True) 
         pm.xform (self.endJnt, t= C, ws=True)
         pm.makeIdentity (self.endJnt, apply=True, r=1, t=0, s=0, n=0, pn=0)
@@ -182,7 +212,7 @@ class Limb():
         self.startJnt.setParent (self.limbMoveAll)
         
         ##joint4(hand) se estiver setado nas opcoes      
-        if self.handJoint:
+        if self.lastJoint:
             #joint4
             # Faz a orientacao do ultimo bone independente da normal do braco
             # Se o cotovelo estiver para frente inverte a normal
@@ -201,13 +231,15 @@ class Limb():
            
             m = orientMatrix (mvector=CD,normal=n,pos=C, axis=self.axis)              
             pm.select(cl=True)
-            self.handJnt= pm.joint()
+            jntName= self.limbDict['lastJntSetup']['nameTempl']+self.jntSulfix
+            self.handJnt= pm.joint(n=jntName)
             pm.xform (self.handJnt, m = m, ws=True) 
             pm.makeIdentity (self.handJnt, apply=True, r=1, t=0, s=0, n=0, pn=0) 
             
             #cria joint5 e so move
             pm.select(cl=True)
-            self.handTipJnt=pm.joint()
+            jntName= self.limbDict['lastJntSetup']['nameTempl']+self.tipJxtSulfix
+            self.handTipJnt=pm.joint(n=jntName)
             pm.xform (self.handTipJnt, m = m, ws=True) 
             pm.xform (self.handTipJnt, t=D, ws=True)
             pm.makeIdentity (self.handTipJnt, apply=True, r=1, t=0, s=0, n=0, pn=0)        
@@ -289,7 +321,7 @@ class Limb():
         pm.parent (self.moveAll1Cntrl.getParent(), self.poleVec.getParent(), self.ikCntrl.getParent(), self.limbMoveAll)
 
         #handCntrls se houver
-        if self.handJoint:
+        if self.lastJoint:
             displaySetup=self.limbDict['startCntrlSetup']
             cntrlName=displaySetup['nameTempl']
             self.startCntrl = cntrlCrv (name=cntrlName, obj=self.handJnt,**displaySetup)
@@ -443,7 +475,7 @@ class Limb():
         weightAttr = cnstrConn.target.connections(p=True, t='orientConstraint') ##Descobre o parametro de peso do constraint        
         ikfkReverse.outputX >> weightAttr[0]
         
-        if self.handJoint:
+        if self.lastJoint:
             handTargetAttrs = handCnst.target.connections(p=True, t='orientConstraint')
             ikfkReverse.outputX >> handTargetAttrs [1]
             self.limbMoveAll.ikfk >> handTargetAttrs [0]
@@ -511,41 +543,61 @@ class Finger:
         self.tipGuide=None
         self.fold1Guide=None
         self.fold2Guide=None
+
+        ##IMPLEMENTAR padroes de nome 
+        self.guideSulfix='_guide'
+        self.jntSulfix='_jnt'
+        self.jxtSulfix='_jxt'
+        self.tipJxtSulfix='Tip_jxt'
+        grpSulfix='_grp'
         
         ##setaqens de aparencia dos controles
         self.fingerDict={'name':name,'folds':folds, 'axis':axis, 'flipAxis':flipAxis}
         self.fingerDict['moveallCntrlSetup']={'nameTempl':self.name+'MoveAll', 'icone':'circuloX','size':0.1,'color':(1,1,0) }    
         self.fingerDict['palmCntrlSetup']={'nameTempl':self.name+'palm', 'icone':'cubo','size':0.2,'color':(1,0,0) }    
         self.fingerDict['baseCntrlSetup']={'nameTempl':self.name+'base', 'icone':'cubo','size':0.3,'color':(1,1,0) }    
-        self.fingerDict['tipCntrlSetup']={'nameTempl':self.name+'tip', 'icone':'circuloX','size':0.3,'color':(0,1,1) }    
+        #self.fingerDict['tipCntrlSetup']={'nameTempl':self.name+'tip', 'icone':'circuloX','size':0.3,'color':(0,1,1) }    
         self.fingerDict['fold1CntrlSetup']={'nameTempl':self.name+'fold1', 'icone':'circuloX','size':0.3,'color':(0,1,1) }    
         self.fingerDict['fold2CntrlSetup']={'nameTempl':self.name+'fold2', 'icone':'circuloX','size':0.3,'color':(0,1,1) }    
+
+        self.fingerDict['moveallGuideSetup']={'nameTempl':self.name+'MoveAll','size':0.1,'color':(1,1,0) }    
+        self.fingerDict['palmGuideSetup']={'nameTempl':self.name+'palm', 'size':0.2,'color':(1,0,0) }    
+        self.fingerDict['baseGuideSetup']={'nameTempl':self.name+'base', 'size':0.3,'color':(1,1,0) }    
+        self.fingerDict['tipGuideSetup']={'nameTempl':self.name+'tip', 'size':0.3,'color':(0,1,1) }    
+        self.fingerDict['fold1GuideSetup']={'nameTempl':self.name+'fold1', 'size':0.3,'color':(0,1,1) }    
+        self.fingerDict['fold2GuideSetup']={'nameTempl':self.name+'fold2', 'size':0.3,'color':(0,1,1) }    
+
+        self.fingerDict['palmJntSetup']={'nameTempl':self.name+'Palm', 'icone':'Bone','size':0.2}    
+        self.fingerDict['baseJntSetup']={'nameTempl':self.name+'Base', 'icone':'Bone','size':0.3}    
+        self.fingerDict['tipJntSetup']={'nameTempl':self.name, 'icone':'Bone','size':0.3}    
+        self.fingerDict['fold1JntSetup']={'nameTempl':self.name+'Fold1', 'icone':'Bone','size':0.3}    
+        self.fingerDict['fold2JntSetup']={'nameTempl':self.name+'Fold2', 'icone':'Bone','size':0.3}    
+
+
 
     #guide 
     def doGuide(self, **kwargs):
         self.fingerGuideDict={'moveall':[0,0,0],'palm':[0,0,0],'base':[1,0,0],'tip':[2,0,0], 'fold1':[0,0.05,0],'fold2':[0,0,0]}
         self.fingerGuideDict.update(kwargs) # atualiza com o q foi entrado
-        
-        guideName= self.fingerDict['moveallCntrlSetup']['nameTempl']+'_guide'
-        
+                
         #se existir apaga
+        guideName= self.fingerDict['moveallGuideSetup']['nameTempl']+self.guideSulfix
         if pm.objExists (guideName):
-            pm.delete (guideName)
-        
-        #grupos    
+            pm.delete (guideName)        
         self.fingerGuideMoveall = pm.group(n=guideName,em=True)
-        guideName=self.fingerDict['palmCntrlSetup']['nameTempl']+'_guide'
+        
+        guideName=self.fingerDict['palmGuideSetup']['nameTempl']+self.guideSulfix
         self.palmGuide = pm.spaceLocator (n=guideName,p=(0,0,0))
         self.palmGuide.displayHandle.set(1)
         self.palmGuide.localScale.set(0.1,0.1,0.1) 
 
-        guideName=self.fingerDict['baseCntrlSetup']['nameTempl']+'_guide'
+        guideName=self.fingerDict['baseGuideSetup']['nameTempl']+self.guideSulfix
         self.baseGuide = pm.spaceLocator (n=guideName,p=(0,0,0))
         self.baseGuide.displayHandle.set(1)
         self.baseGuide.translate.set(1.3,0,0)
         self.baseGuide.localScale.set(0.1,0.1,0.1)
         
-        guideName=self.fingerDict['tipCntrlSetup']['nameTempl']+'_guide'
+        guideName=self.fingerDict['tipGuideSetup']['nameTempl']+self.guideSulfix
         self.tipGuide = pm.spaceLocator (n=guideName,p=(0,0,0))
         self.tipGuide.displayHandle.set(1)
         self.tipGuide.translate.set(1.7,0,0)
@@ -554,14 +606,14 @@ class Finger:
        
         #cria conforme o numero de dobras       
         if self.folds==2:
-            guideName=self.fingerDict['fold1CntrlSetup']['nameTempl']+'_guide'
+            guideName=self.fingerDict['fold1GuideSetup']['nameTempl']+self.guideSulfix
             self.fold1Guide = pm.spaceLocator (n=guideName,p=(0,0,0))
             self.fold1Guide.displayHandle.set(1)        
             fold1GuideGrp = pm.group(self.fold1Guide)
             fold1GuideGrp.translate.set(1.3,0,0)
             self.fold1Guide.localScale.set(0.1,0.1,0.1)
 
-            guideName=self.fingerDict['fold2CntrlSetup']['nameTempl']+'_guide'
+            guideName=self.fingerDict['fold2GuideSetup']['nameTempl']+self.guideSulfix
             self.fold2Guide = pm.spaceLocator (n=guideName,p=(0,0,0))  
             self.fold2Guide.displayHandle.set(1)       
             fold2GuideGrp = pm.group(self.fold2Guide)
@@ -581,7 +633,7 @@ class Finger:
             pm.parent (fold1GuideGrp,fold2GuideGrp, self.fingerGuideMoveall)
             
         elif self.folds==1:
-            guideName=self.fingerDict['fold1CntrlSetup']['nameTempl']+'_guide'
+            guideName=self.fingerDict['fold1GuideSetup']['nameTempl']+self.guideSulfix
             self.fold1Guide = pm.spaceLocator (n=guideName,p=(0,0,0))        
             self.fold1Guide.displayHandle.set(1) 
             fold1GuideGrp = pm.group(self.fold1Guide)
@@ -596,7 +648,7 @@ class Finger:
             pm.parent (fold1GuideGrp, self.fingerGuideMoveall)
             
         elif self.folds==0:    
-            guideName=self.fingerDict['fold1CntrlSetup']['nameTempl']+'_guide'
+            guideName=self.fingerDict['fold1GuideSetup']['nameTempl']+self.guideSulfix
             self.fold1Guide = pm.spaceLocator (n=guideName,p=(0,0,0))        
             self.fold1Guide.displayHandle.set(1) 
             fold1GuideGrp = pm.group(self.fold1Guide)
@@ -623,7 +675,7 @@ class Finger:
 
     def doRig(self):
         # se nao existir guide, cria um default
-        if not pm.objExists (self.fingerDict['moveallCntrlSetup']['nameTempl']+'_guide'):
+        if not self.fingerGuideMoveall:
             self.doGuide()
             
         # se existir um modulo igual, apaga
@@ -655,6 +707,7 @@ class Finger:
         if self.folds==2:
             fold2=pm.xform (self.fold2Guide, q=True,ws=True, t=True)
             guide=[palm,base,fold1,fold2,tip]
+            jntNames= [self.fingerDict['palmJntSetup']['nameTempl'],self.fingerDict['baseJntSetup']['nameTempl'],self.fingerDict['fold1JntSetup']['nameTempl'],self.fingerDict['fold2JntSetup']['nameTempl'], self.fingerDict['tipJntSetup']['nameTempl']]
         elif self.folds==1:
             guide=[palm,base,fold1,tip]
         elif self.folds==0:
@@ -672,13 +725,14 @@ class Finger:
                 AB=B-A  
                            
             m= orientMatrix(mvector=AB, normal=n, pos=A, axis=self.axis)
-            
-            j1 = pm.joint()
+            jntName=jntNames[i]+self.jntSulfix
+            j1 = pm.joint(n=jntName)
             fingerJnts.append(j1)
             pm.xform (j1, m = m, ws=True) 
             pm.makeIdentity (j1, apply=True, r=1, t=0, s=1, n=0, pn=0)
         
-        j1 = pm.joint()
+        jntName=self.fingerDict['tipJntSetup']['nameTempl']+self.tipJxtSulfix
+        j1 = pm.joint(n=jntName)
         fingerJnts.append(j1)
         pm.xform (j1, m = m, ws=True)
         pm.xform (j1, t =C, ws=True) 
@@ -746,11 +800,19 @@ class Hand:
         self.folds=folds
         self.fingerNum = fingerNum
         self.handGuideMoveall=None
+        
+        self.guideSulfix='_guide'
+        self.jntSulfix='_jnt'
+        self.jxtSulfix='_jxt'
+        self.tipJxtSulfix='Tip_jxt'
+        grpSulfix='_grp'
+        
         self.handDict={'name':name, 'axis':axis, 'flipAxis':flipAxis, 'folds':folds, 'fingerNum':fingerNum}
         self.handDict['fingers']={}
         self.handDict['moveall']=[0,0,0]
+        self.handDict['fingerNames']=['Pink','Ring','Middle','Index','Thumb']
         for i in range(fingerNum):
-            fingerName=self.name+'dedo'+str(i)#IMPLEMENTAR nomes dos dedos            
+            fingerName=self.name+self.handDict['fingerNames'][i]#IMPLEMENTAR nomes dos dedos            
             self.handDict['fingers']['finger'+str(i+1)] = {'name':fingerName,
                                                 'fingerGuideDict':{'moveall':[0,0,(((fingerNum/2)*-.3)+(i*.3))],'palm':[0,0,0],'base':[1,0,0],'tip':[2,0,0], 'fold1':[0,0.05,0],'fold2':[0,0,0]},
                                                 'instance':None
@@ -810,7 +872,6 @@ class Hand:
             f_origin.fold1Guide.rotate >> f_mirror.fold1Guide.rotate
             f_origin.fold1Guide.scale >> f_mirror.fold1Guide.scale
             if self.folds==2:
-                print '2 folds'
                 f_origin.fold2Guide.translate >> f_mirror.fold2Guide.translate
                 f_origin.fold2Guide.rotate >> f_mirror.fold2Guide.rotate
                 f_origin.fold2Guide.scale >> f_mirror.fold2Guide.scale  
@@ -1056,7 +1117,6 @@ class Foot:
         cntrlName = displaySetup['nameTempl']        
         baseCntrl=cntrlCrv(name=cntrlName,obj=self.centerGuide, **displaySetup)
         pm.xform (baseCntrl, rp=ankle, ws=True)
-        print ankle
         baseCntrl.addAttr ('extraRollCntrls',min=0, max=1, dv=0, k=1)
         
         #slidePivot
@@ -1627,7 +1687,6 @@ class Chain:
         for i in range(len(AB)):
             #se a o vetor do bone coincidir com o eixo Z usa o eixo X de secundario
             dot=AB[i].normal()*Z
-            print dot
             if abs(dot) < 0.95:
                 normal=AB[i]^Z
             else:
