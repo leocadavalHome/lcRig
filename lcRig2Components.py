@@ -777,7 +777,7 @@ class RibbonBezier:
             blend2A.input[0].set (1)
             gammaCorr2.outValueX >> blend2A.input[1]
             blend2B.input[0].set(1)
-            blend2A.output >> blend2B.input[1];
+            blend2A.output >> blend2B.input[1]
             cntrlList[3].attr('autoVolume') >> blend2B.attributesBlender
             blend2B.output >> cntrl2.getParent().scaleY
             blend2B.output >> cntrl2.getParent().scaleZ
