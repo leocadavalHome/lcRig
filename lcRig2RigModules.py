@@ -186,6 +186,8 @@ class Limb():
             
         n = BC^AB
         
+        self.jointLength=AB.length()+BC.length() 
+        
         m = orientMatrix (mvector=AB,normal=n,pos=A, axis=self.axis)            
         #cria joint1
         pm.select(cl=True)
