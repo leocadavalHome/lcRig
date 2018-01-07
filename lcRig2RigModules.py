@@ -23,7 +23,6 @@ class Limb():
     #self.twoJoints=False RETIREI CODIGO DE ARTICULACAO DE DOIS JOINTS. PRECISA FAZER IMPLEMENTACAO COMPLETA 
                  
     def __init__ (self,name='limb',axis='X',flipAxis=False, lastJoint=True, **kwargs):
-
         
         self.name = name
         self.flipAxis = flipAxis
@@ -113,6 +112,29 @@ class Limb():
 
         self.limbGuideMoveall.translate.set( self.limbGuideDict['moveall'])
 
+    def getGuideFromScene(self):      
+        try:
+            guideName=self.limbDict['moveallGuideSetup']['nameTempl']+self.guideSulfix              
+            self.limbGuideMoveall=pm.PyNode(guideName)
+            
+            guideName=self.limbDict['startGuideSetup']['nameTempl']+self.guideSulfix
+            self.startGuide = pm.PyNode(guideName)
+    
+            guideName=self.limbDict['midGuideSetup']['nameTempl']+self.guideSulfix
+            self.midGuide = pm.PyNode(guideName)
+    
+            guideName=self.limbDict['endGuideSetup']['nameTempl']+self.guideSulfix
+            self.endGuide =pm.PyNode(guideName)
+                   
+            if self.lastJoint:
+                guideName=self.limbDict['lastGuideSetup']['nameTempl']+self.guideSulfix
+                self.lastGuide = pm.PyNode(guideName)
+
+            print 'guide do %s OK!' % self.name
+
+        except:
+            print 'algum nao funcionou'
+            
     def mirrorConnectGuide(self, limb):
         if not self.limbGuideMoveall:
             self.doGuide()        
@@ -677,7 +699,30 @@ class Finger:
         self.fold1Guide.translate.set( self.fingerGuideDict['fold1'])
         if self.folds==2:
             self.fold2Guide.translate.set( self.fingerGuideDict['fold2'])
-            
+
+
+    def getGuideFromScene(self):
+                
+        #se existir apaga
+        guideName= self.fingerDict['moveallGuideSetup']['nameTempl']+self.guideSulfix
+        self.fingerGuideMoveall = pm.PyNode (guideName)
+        
+        guideName=self.fingerDict['palmGuideSetup']['nameTempl']+self.guideSulfix
+        self.palmGuide = pm.PyNode (guideName)
+
+        guideName=self.fingerDict['baseGuideSetup']['nameTempl']+self.guideSulfix
+        self.baseGuide = pm.PyNode (guideName)
+        
+        guideName=self.fingerDict['tipGuideSetup']['nameTempl']+self.guideSulfix
+        self.tipGuide = pm.PyNode (guideName)
+      
+        guideName=self.fingerDict['fold1GuideSetup']['nameTempl']+self.guideSulfix
+        self.fold1Guide = pm.PyNode (guideName)
+
+        if self.folds==2:
+            guideName=self.fingerDict['fold2GuideSetup']['nameTempl']+self.guideSulfix
+            self.fold2Guide = pm.PyNode (guideName) 
+
 
 
     def doRig(self):
@@ -837,7 +882,7 @@ class Hand:
         self.handGuideDict = self.handDict['guideDict'].copy()
         self.handGuideDict.update(kwargs)
         
-        if pm.objExists (self.name+'Moveall_guide'):
+        if pm.objExists ():
             pm.delete (self.name+'Moveall_guide')
     
         self.handGuideMoveall = pm.group(n=self.name+'Moveall_guide',em=True)
@@ -849,6 +894,12 @@ class Hand:
             pm.parent (f.fingerGuideMoveall,self.handGuideMoveall)
 
         pm.xform (self.handGuideMoveall, ws=True, t=self.handGuideDict['moveall'])
+
+    def getGuideFromScene(self): 
+        guideName=self.name+'Moveall_guide'           
+        self.handGuideMoveall = pm.PyNode(guideName)
+        for finger in self.handDict['fingers']:                                                                                  
+            self.handDict['fingers'][finger]['instance'].getGuideFromScene()
 
         
     def mirrorConnectGuide(self, hand):
@@ -983,10 +1034,7 @@ class Foot:
         self.footDict.update(kwargs) 
         self.footGuideDict.update(self.footDict['guideDict']) 
         self.footDict['guideDict']=self.footGuideDict.copy()
-
-
-
-                        
+                       
     def doGuide(self,**kwargs):
         #atualiza o footGuideDict com o q for entrado aqui nesse metodo
         #ex: doGuide (center=[0,0,0], tip=[10,10,0]
@@ -1059,6 +1107,35 @@ class Foot:
         pm.parent (self.centerGuideGrp , self.tipGuide,self.heelGuide, self.footGuideMoveall)
         
         self.footGuideMoveall.translate.set(self.footGuideDict['moveall'])
+
+    def getGuideFromScene(self):               
+        guideName=self.footDict['moveallGuideSetup']['nameTempl']+'_guide'           
+        self.footGuideMoveall=pm.PyNode(guideName)
+        
+        guideName=self.footDict['centerGuideSetup']['nameTempl']+self.guideSulfix
+        self.centerGuide=pm.PyNode(guideName)
+       
+        guideName=self.footDict['centerGuideSetup']['nameTempl']+self.grpSulfix
+        self.centerGuideGrp=pm.PyNode(guideName)
+        
+        guideName=self.footDict['tipGuideSetup']['nameTempl']+self.guideSulfix
+        self.tipGuide=pm.PyNode(guideName)
+                
+        guideName=self.footDict['heelGuideSetup']['nameTempl']+self.guideSulfix
+        self.heelGuide=pm.PyNode(guideName)
+       
+        guideName=self.footDict['ankleGuideSetup']['nameTempl']+self.guideSulfix
+        self.ankleGuide=pm.PyNode(guideName)
+
+        guideName=self.footDict['ballGuideSetup']['nameTempl']+self.guideSulfix
+        self.ballGuide=pm.PyNode(guideName)
+       
+        guideName=self.footDict['inGuideSetup']['nameTempl']+self.guideSulfix
+        self.inGuide=pm.PyNode(guideName)
+        
+        guideName=self.footDict['outGuideSetup']['nameTempl']+self.guideSulfix
+        self.outGuide=pm.PyNode(guideName)
+        
 
     def mirrorConnectGuide(self,foot):
         if not self.footGuideMoveall:
@@ -1431,6 +1508,25 @@ class Spine:
 
         pm.parent (self.startGuide,midGuideGrp,self.endGuide, self.spineGuideMoveall)
         self.spineGuideMoveall.translate.set (self.spineGuideDict['moveall'])
+
+    def getGuideFromScene(self):        
+        guideName=self.spineDict['moveallGuideSetup']['nameTempl']+self.guideSulfix
+        self.spineGuideMoveall=pm.PyNode(guideName)
+        
+        guideName=self.spineDict['startGuideSetup']['nameTempl']+self.guideSulfix
+        self.startGuide = pm.PyNode(guideName)
+        
+        guideName=self.spineDict['midGuideSetup']['nameTempl']+self.guideSulfix               
+        self.midGuide = pm.PyNode(guideName)
+
+        guideName=self.spineDict['endGuideSetup']['nameTempl']+self.guideSulfix               
+        self.endGuide = pm.PyNode(guideName)
+
+        guideName=self.spineDict['endTipGuideSetup']['nameTempl']+self.guideSulfix               
+        self.endTipGuide = pm.PyNode(guideName)
+        
+        guideName=self.spineDict['startTipGuideSetup']['nameTempl']+self.guideSulfix               
+        self.startTipGuide = pm.PyNode(guideName)
                 
     def doRig(self):
         #se nao tiver guide, faz
@@ -1730,6 +1826,16 @@ class Chain:
             pm.parent(guide, self.chainGuideMoveall)
         self.chainGuideMoveall.translate.set (self.chainGuideDict['moveall'])
 
+    def getGuideFromScene(self):
+        cntrlName=self.chainDict['moveAllCntrlSetup']['nameTempl']+self.guideSulfix
+        self.chainGuideMoveall=pm.PyNode(cntrlName)
+
+        self.guideList=[]
+        for i in range(len(self.chainGuideDict.keys())-1):
+            guideName= self.chainDict['guideSetup']['nameTempl']+str(i)+self.guideSulfix
+            guide= pm.PyNode(cntrlName)
+            self.guideList.append (guide)
+
     def mirrorConnectGuide(self,chain):
         if not self.chainGuideMoveall:
             self.doGuide()        
@@ -1920,7 +2026,17 @@ class Neck:
         pm.parent (self.startGuide,self.endGuide,self.neckGuideMoveall)
         
         self.neckGuideMoveall.translate.set(self.neckGuideDict['moveall'])
-                   
+
+    def getGuideFromScene(self):
+        cntrlName=self.neckDict['moveAllGuideSetup']['nameTempl']+self.guideSulfix
+        self.neckGuideMoveall=pm.PyNode(cntrlName)
+
+        cntrlName=self.neckDict['startGuideSetup']['nameTempl']+self.guideSulfix
+        self.startGuide=pm.PyNode(cntrlName)
+        
+        cntrlName=self.neckDict['endGuideSetup']['nameTempl']+self.guideSulfix
+        self.endGuide=pm.PyNode(cntrlName)    
+                       
     def doRig(self):
         # se nao tiver guide faz um padrao
         if not self.neckGuideMoveall:

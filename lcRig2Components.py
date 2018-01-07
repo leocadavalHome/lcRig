@@ -752,7 +752,7 @@ class RibbonBezier:
             blend1A.input[0].set (1)
             gammaCorr1.outValueX >> blend1A.input[1]
             blend1B.input[0].set(1)
-            blend1A.output >> blend1B.input[1]; r
+            blend1A.output >> blend1B.input[1]
             blend1B.output >> cntrl1.getParent().scaleY
             blend1B.output >> cntrl1.getParent().scaleZ  
             #expressao que le a rampa para setar valores da escala de cada joint quando fizer squash/stretch        
