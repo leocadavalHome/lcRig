@@ -2067,41 +2067,41 @@ class Neck:
         pm.select (cl=True)
         
         jntName= self.neckDict['startGuideSetup']['nameTempl']+self.jntSulfix
-        j1 = pm.joint(n=jntName)
-        pm.xform (j1, m = m, ws=True) 
-        pm.makeIdentity (j1, apply=True, r=1, t=0, s=1, n=0, pn=0)
+        self.startJnt = pm.joint(n=jntName)
+        pm.xform (self.startJnt, m = m, ws=True) 
+        pm.makeIdentity (self.startJnt, apply=True, r=1, t=0, s=1, n=0, pn=0)
 
         jntName= self.neckDict['endGuideSetup']['nameTempl']+self.jntSulfix        
-        j2 = pm.joint(n=jntName)
-        pm.xform (j2, m = m, ws=True) 
-        pm.xform (j2, t=B ,ws=True)
-        pm.makeIdentity (j2, apply=True, r=1, t=0, s=1, n=0, pn=0)
+        self.endJnt = pm.joint(n=jntName)
+        pm.xform (self.endJnt, m = m, ws=True) 
+        pm.xform (self.endJnt, t=B ,ws=True)
+        pm.makeIdentity (self.endJnt, apply=True, r=1, t=0, s=1, n=0, pn=0)
         pm.select (cl=True)
 
         jntName= self.neckDict['midGuideSetup']['nameTempl']+self.jntSulfix        
-        j3 = pm.joint(n=jntName)
-        pm.xform (j3, m = m, ws=True) 
-        pm.xform (j3, t=(0,0,0) ,ws=True)
-        pm.makeIdentity (j3, apply=True, r=1, t=0, s=1, n=0, pn=0)
+        self.midJnt = pm.joint(n=jntName)
+        pm.xform (self.midJnt, m = m, ws=True) 
+        pm.xform (self.midJnt, t=(0,0,0) ,ws=True)
+        pm.makeIdentity (self.midJnt, apply=True, r=1, t=0, s=1, n=0, pn=0)
         
         aimTwist = AimTwistDivider()
-        aimTwist.start.setParent (j1,r=True)
-        aimTwist.end.setParent (j2,r=True)
+        aimTwist.start.setParent (self.startJnt,r=True)
+        aimTwist.end.setParent (self.endJnt,r=True)
         aimTwist.mid.setParent (self.moveall)
-        j3.setParent(aimTwist.mid)
-        j3.translate.set(0,0,0)
-        j3.rotate.set(0,0,0)
+        self.midJnt.setParent(aimTwist.mid)
+        self.midJnt.translate.set(0,0,0)
+        self.midJnt.rotate.set(0,0,0)
         
         displaySetup= self.neckDict['startCntrlSetup'].copy()
         cntrlName = displaySetup['nameTempl']        
         self.startCntrl = cntrlCrv(name=cntrlName, obj=self.startGuide, **displaySetup)
-        pm.parentConstraint(self.startCntrl, j1,mo=True)      
+        pm.parentConstraint(self.startCntrl, self.startJnt,mo=True)      
         displaySetup= self.neckDict['endCntrlSetup'].copy()
         cntrlName = displaySetup['nameTempl']                
         self.endCntrl = cntrlCrv(name=cntrlName, obj=self.endGuide,**displaySetup)
-        pm.parentConstraint(self.endCntrl, j2,mo=True)
+        pm.parentConstraint(self.endCntrl, self.endJnt,mo=True)
         self.endCntrl.getParent().setParent(self.startCntrl)
-        pm.parent (j1,self.startCntrl.getParent(),self.moveall)
+        pm.parent (self.startJnt,self.startCntrl.getParent(),self.moveall)
 
         #IMPLEMENTAR: guardar as posicoes dos guides ao final
         
