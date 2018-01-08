@@ -873,23 +873,22 @@ class Hand:
                                                 }
         self.handDict.update(kwargs)
         
-        for finger in self.handDict['fingers']:                                                       
+        for finger in self.handDict['fingers']: 
+            print finger                                                      
             f=Finger(name=self.handDict['fingers'][finger]['name'],axis=self.axis,flipAxis=self.flipAxis,folds=self.folds)                                 
-            self.handDict['fingers'][finger]['instance']=f
+            self.handDict['fingers'][finger]['instance'] = f
             
     def doGuide(self, **kwargs):
         #IMPLEMENTAR update do handDict - talvez handGuideDict
         self.handGuideDict = self.handDict['guideDict'].copy()
         self.handGuideDict.update(kwargs)
-        
-        if pm.objExists ():
+        if pm.objExists(self.name+'Moveall_guide'):
             pm.delete (self.name+'Moveall_guide')
-    
+              
         self.guideMoveall = pm.group(n=self.name+'Moveall_guide',em=True)
-
         for finger in self.handDict['fingers']:                                                                                  
             f = self.handDict['fingers'][finger]['instance']
-            dict=self.handDict['fingers'][finger]['fingerGuideDict']
+            dict = self.handDict['fingers'][finger]['fingerGuideDict']
             f.doGuide(**dict)
             pm.parent (f.guideMoveall,self.guideMoveall)
 
@@ -948,6 +947,7 @@ class Hand:
 
 
     def doRig(self, **kwargs):
+        print 'entrou'
         if not self.guideMoveall:
             self.doGuide()
 
