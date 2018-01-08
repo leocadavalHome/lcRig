@@ -385,6 +385,15 @@ def createSpc (driver, name):
 		pm.parentConstraint (driver, drvGrp)
 	spcGrp = pm.group (empty=True, n=name+'_spc')
 	pm.parent (spcGrp, drvGrp)
+	
+	if not pm.objExists('spaces'):
+	    spcs =  pm.group ( name+'_drv', n='spaces' )
+	    if not pm.objExists('MOVEALL'):
+	        pm.group ( spcs, n='MOVEALL' )
+	    else:
+	        pm.parent ( spcs, 'MOVEALL')
+	else:
+	    pm.parent ( name+'_drv', 'spaces')
         
 def addSpc (target, spaceList, switcher, type):	
     for space in spaceList:
@@ -608,9 +617,16 @@ class RibbonBezier:
             pm.delete (self.ribbonDict['moveallSetup']['nameTempl'])
         if pm.objExists(self.ribbonDict['noMoveSetup']['nameTempl']):
             pm.delete (self.ribbonDict['noMoveSetup']['nameTempl'])
+
+
                            
         ###Estrutura que nao deve ter transformacao       
         noMoveSpace = pm.group (empty=True, n=self.ribbonDict['noMoveSetup']['nameTempl'])
+        if not pm.objExists('NOMOVE'):
+            pm.group ( self.ribbonDict['noMoveSetup']['nameTempl'], n='NOMOVE' )
+        else:
+            pm.parent ( self.ribbonDict['noMoveSetup']['nameTempl'], 'NOMOVE')
+
         noMoveSpace.visibility.set(0)
         noMoveSpace.translate.set(self.size*-0.5,0,0)    
         noMoveBend1 = pm.nurbsPlane ( p=(self.size*-0.25,0,0), ax=(0,0,1), w=self.size*0.5, lr = .1 , d = 3, u =5, v =1)        
@@ -951,10 +967,21 @@ class RibbonBezier:
         pm.parent (extra1.extractorGrp,extra2.extractorGrp, limbMoveAll )        
         pm.pointConstraint (limbJoint1, extra2.extractorGrp, mo=True)        
         extra1.extractor.extractTwist >> ribbonStartCntrl.twist        
-        extractMulti = pm.createNode('multDoubleLinear')
-        extra2.extractor.extractTwist >> extractMulti.input1
-        extractMulti.input2.set(-1)
-        extractMulti.output >> ribbonEndCntrl.twist
+
+        extractMulti1 = pm.createNode('multDoubleLinear')
+        extra1.extractor.extractTwist >> extractMulti1.input1
+        extractMulti2 = pm.createNode('multDoubleLinear')
+        extra2.extractor.extractTwist >> extractMulti2.input1
+        
+        if limbObject.flipAxis:       
+            extractMulti1.input2.set(-1)
+            extractMulti2.input2.set(1)
+        else:    
+            extractMulti2.input2.set(-1)
+            extractMulti1.input2.set(1)
+                       
+        extractMulti1.output >> ribbonStartCntrl.twist
+        extractMulti2.output >> ribbonEndCntrl.twist
         extra1.extractorGrp.visibility.set(0)
         extra2.extractorGrp.visibility.set(0)
         
@@ -1495,11 +1522,17 @@ class RibbonBezierSimple:
         
         if pm.objExists(self.ribbonDict['noMoveSetup']['nameTempl']):
             pm.delete (self.ribbonDict['noMoveSetup']['nameTempl'])
+
         if pm.objExists(self.ribbonDict['moveallSetup']['nameTempl']):
             pm.delete (self.ribbonDict['moveallSetup']['nameTempl'])
                            
         ###Estrutura que nao deve ter transformacao       
         noMoveSpace = pm.group (empty=True, n=self.ribbonDict['noMoveSetup']['nameTempl'])
+        if not pm.objExists('NOMOVE'):
+            pm.group ( self.ribbonDict['noMoveSetup']['nameTempl'], n='NOMOVE' )
+        else:
+            pm.parent ( self.ribbonDict['noMoveSetup']['nameTempl'], 'NOMOVE')
+
         noMoveSpace.visibility.set(0)
         noMoveBend1 = pm.nurbsPlane ( p=(self.size*0.5,0,0), ax=(0,0,1), w=self.size, lr = 0.1 , d = 3, u =5, v =1)        
         noMoveCrvJnt = pm.curve ( bezier=True, d=3, p=[(self.size*-0.5,0,0),(self.size*-0.4,0,0),(self.size*-0.1,0,0),(0,0,0),(self.size*0.1,0,0),(self.size*0.4,0,0),(self.size*0.5,0,0)], k=[0,0,0,1,1,1,2,2,2])        
