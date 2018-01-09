@@ -50,50 +50,114 @@ def cntrlCrv(name='cntrl', obj=None, connType=None,offsets=0, **kwargs):
         crv=pm.curve (d=1, p=((-1,0,0),(-1,0,-3),(-2,0,-3),(0,0,-5),(2,0,-3),(1,0,-3),(1,0,0)),k=[0,1,2,3,4,5,6])
         crv.scale.set(cntrlSize,cntrlSize,cntrlSize) 
         pm.makeIdentity( crv, a = True, t = True, r = True, s = True, n=False ) 
-    elif icone == 'circleX':
-    	controlList = pm.circle(ch=1, n=name+"_cntrl")
-    	crv = controlList[0]
-    	controlHist = controlList[1]
-    	controlHist.normalZ.set(0)
-    	controlHist.normalX.set(1)
-    	crv.scale.set(cntrlSize,cntrlSize,cntrlSize) 
-        pm.makeIdentity( crv, a = True, t = True, r = True, s = True, n=False )
-    elif icone == 'circleY':
-    	controlList = pm.circle(ch=1, n=name+"_cntrl")
-    	crv = controlList[0]
-    	controlHist = controlList[1]
-    	controlHist.normalZ.set(0)
-    	controlHist.normalY.set(1)
-    	crv.scale.set(cntrlSize,cntrlSize,cntrlSize) 
-        pm.makeIdentity( crv, a = True, t = True, r = True, s = True, n=False ) 
-    elif icone == 'circleZ':
-    	crv = pm.circle(ch=0, n=name+"_cntrl")[0]
-    	crv.scale.set(cntrlSize,cntrlSize,cntrlSize) 
-        pm.makeIdentity( crv, a = True, t = True, r = True, s = True, n=False )   
-    elif icone == 'squareX':
-    	crv = pm.curve(p=((1,0,-1), (1,0,1), (-1,0,1), (-1,0,-1), (1,0,-1)), d=1, n=name+"_cntrl")
+    elif icone == "ponteiroX":
+        crv=pm.curve(n=name+"_cntrl",d=1,p=[(0, 0, 0),(1.691495,1.691495,0),(1.697056, 2.537859, 0),(2.545584, 2.545584, 0),(2.545584, 1.707095, 0),(1.691504, 1.692763, 0)], k=[0 ,1,2, 3, 4, 5])
+        crv.rotateZ.set(90)
+        crv.scale.set (cntrlSize,cntrlSize,cntrlSize)
+        pm.makeIdentity (crv,apply=True,t=1,r=1,s=1,n=0)
+    elif icone == "ponteiroReto":
+        crv=pm.curve(n=name+"_cntrl",d=1,p=[(0,0,0), (0, 1.414597, 0),(0.569164, 2, 0),( 0, 2.569164, 0),(-0.569164, 2, 0),( 0.00139909, 1.432235, 0)] ,k=[0,1,2,3,4, 5])
+        cmds.setAttr (name+"_cntrl.rotateY", 90)
+        crv.scale.set (cntrlSize,cntrlSize,cntrlSize)
+        pm.makeIdentity (crv,apply=True,t=1,r=1,s=1,n=0)
+    elif icone == "ponteiroY":
+        crv=pm.curve(n=name+"_cntrl",d=1,p=[(0, 0, 0),(1.691495,1.691495,0),(1.697056, 2.537859, 0),(2.545584, 2.545584, 0),(2.545584, 1.707095, 0),(1.691504, 1.692763, 0)], k=[0 ,1,2, 3, 4, 5])
+        crv.rotateY.set(90)
+        crv.rotateX.set(90)
+        crv.scale.set (cntrlSize,cntrlSize,cntrlSize)
+        pm.makeIdentity (crv,apply=True,t=1,r=1,s=1,n=0)
+    elif icone == "ponteiroZ":
+        crv=pm.curve(n=name+"_cntrl",d=1,p=[(0, 0, 0),(1.691495,1.691495,0),(1.697056, 2.537859, 0),(2.545584, 2.545584, 0),(2.545584, 1.707095, 0),(1.691504, 1.692763, 0)], k=[0 ,1,2, 3, 4, 5])
+        crv.scale.set (cntrlSize,cntrlSize,cntrlSize)
+        pm.makeIdentity (crv,apply=True,t=1,r=1,s=1,n=0)
+    elif icone == "ponteiroMenosX":
+        crv=pm.curve(n=name+"_cntrl",d=1,p=[(0, 0, 0),(1.691495,1.691495,0),(1.697056, 2.537859, 0),(2.545584, 2.545584, 0),(2.545584, 1.707095, 0),(1.691504, 1.692763, 0)], k=[0 ,1,2, 3, 4, 5])
+        crv.rotateZ.set(-90)
+        crv.scale.set (cntrlSize,cntrlSize,cntrlSize)
+        pm.makeIdentity (crv,apply=True,t=1,r=1,s=1,n=0)
+    elif icone == "ponteiroMenosY":
+        crv=pm.curve(n=name+"_cntrl",d=1,p=[(0, 0, 0),(1.691495,1.691495,0),(1.697056, 2.537859, 0),(2.545584, 2.545584, 0),(2.545584, 1.707095, 0),(1.691504, 1.692763, 0)], k=[0 ,1,2, 3, 4, 5])
+        crv.rotateY.set(-90)
+        crv.rotateX.set(-90)
+        crv.scale.set (cntrlSize,cntrlSize,cntrlSize)
+        pm.makeIdentity (crv,apply=True,t=1,r=1,s=1,n=0)
+    elif icone == "ponteiroMenosZ":
+        crv=pm.curve(n=name+"_cntrl",d=1,p=[(0, 0, 0),(1.691495,1.691495,0),(1.697056, 2.537859, 0),(2.545584, 2.545584, 0),(2.545584, 1.707095, 0),(1.691504, 1.692763, 0)], k=[0 ,1,2, 3, 4, 5])
+        crv.scale.set (cntrlSize,cntrlSize*-1,cntrlSize*-1)
+        pm.makeIdentity (crv,apply=True,t=1,r=1,s=1,n=0)
+    elif icone == 'quadradoX':
+    	crv = pm.curve(p=((.5,0,-.5), (.5,0,.5), (-.5,0,.5), (-.5,0,-.5), (.5,0,-.5)), d=1, n=name+"_cntrl")
     	crv.rotateZ.set(90)
     	crv.scale.set(cntrlSize,cntrlSize,cntrlSize) 
         pm.makeIdentity( crv, a = True, t = True, r = True, s = True, n=False )   
-    elif icone == 'squareY':
-    	crv = pm.curve(p=((1,0,-1), (1,0,1), (-1,0,1), (-1,0,-1), (1,0,-1)), d=1, n=name+"_cntrl")
+    elif icone == 'quadradoY':
+    	crv = pm.curve(p=((.5,0,-.5), (.5,0,.5), (-.5,0,.5), (-.5,0,-.5), (.5,0,-.5)), d=1, n=name+"_cntrl")
     	crv.scale.set(cntrlSize,cntrlSize,cntrlSize) 
-        pm.makeIdentity( crv, a = True, t = True, r = True, s = True, n=False )
-    
-    elif icone == 'squareZ':
-    	crv = pm.curve(p=((1,0,-1), (1,0,1), (-1,0,1), (-1,0,-1), (1,0,-1)), d=1, n=name+"_cntrl")
+        pm.makeIdentity( crv, a = True, t = True, r = True, s = True, n=False )    
+    elif icone == 'quadradoZ':
+    	crv = pm.curve(p=((.5,0,-.5), (.5,0,.5), (-.5,0,.5), (-.5,0,-.5), (.5,0,-.5)), d=1, n=name+"_cntrl")
     	crv.rotateX.set(90)
     	crv.scale.set(cntrlSize,cntrlSize,cntrlSize) 
         pm.makeIdentity( crv, a = True, t = True, r = True, s = True, n=False )
-    
-    elif icone == 'cube':
-    	crv = pm.curve(p=((1,-1,1), (1,-1,-1), (-1,-1,-1), (-1,-1,1), (1,-1,1), (1,1,1), (1,1,-1), (1,-1,-1), (-1,-1,-1), (-1,1,-1),
-    	(1,1,-1), (1,1,1), (-1,1,1), (-1,1,-1), (-1,-1,-1), (-1,-1,1), (-1,1,1)), d=1, n=name+"_cntrl")
+    elif icone=='dropY':
+        crv=pm.circle(nr=[1,0,0], ch=0,  n=name+"_cntrl")[0]
+        pm.move(0,3,0, crv, r=1)
+        pm.makeIdentity(crv, apply=1, t=1)
+        pm.move(0,-3,0, crv.scalePivot, crv.rotatePivot, r=1)
+        pm.move(0,-1.8, crv.cv[5], r=1)
+        pm.scale([crv.cv[4],crv.cv[6]], [1, 1, 0.01],  r=1)
+        pm.move(0,0.5,0, crv.cv[1], r=1)
+        pm.move(0,0.6,0, crv.cv[0], crv.cv[2],r=1)
     	crv.scale.set(cntrlSize,cntrlSize,cntrlSize) 
-        pm.makeIdentity( crv, a = True, t = True, r = True, s = True, n=False )
-    
-    elif icone == 'hexagonX':
-    	controlList = pm.circle(ch=1, n=name+"_cntrl")
+        pm.makeIdentity( crv, a = True, t = True, r = True, s = True, n=False )   
+    elif icone=='dropZ':        
+        crv = pm.circle(nr=[0,1,0], ch=0,  n=name+"_cntrl")[0]
+        pm.move(0,0,-3, crv,r=1)
+        pm.makeIdentity(crv, apply=1, t=1)
+        pm.move(0,0,3, crv.scalePivot, crv.rotatePivot, r=1)
+        pm.move(0,0,1.8, crv.cv[5], r=1)
+        pm.scale([crv.cv[4], crv.cv[6]],[0.01, 1, 1], r=1)
+        pm.move(0,0,-0.5, crv.cv[1], r=1)
+        pm.move(0,0,-0.6, crv.cv[0], crv.cv[2] , r=1)
+    	crv.scale.set(cntrlSize,cntrlSize,cntrlSize) 
+        pm.makeIdentity( crv, a = True, t = True, r = True, s = True, n=False )   
+    elif icone=='dropMenosY':
+        crv=pm.circle(nr=[1,0,0], ch=0,  n=name+"_cntrl")[0]
+        pm.move(0,3,0, crv, r=1)
+        pm.makeIdentity(crv, apply=1, t=1)
+        pm.move(0,-3,0, crv.scalePivot, crv.rotatePivot, r=1)
+        pm.move(0,-1.8, crv.cv[5], r=1)
+        pm.scale([crv.cv[4],crv.cv[6]], [1, 1, 0.01],  r=1)
+        pm.move(0,0.5,0, crv.cv[1], r=1)
+        pm.move(0,0.6,0, crv.cv[0], crv.cv[2],r=1)
+    	crv.scale.set(cntrlSize,cntrlSize*-1,cntrlSize) 
+        pm.makeIdentity( crv, a = True, t = True, r = True, s = True, n=False )   
+    elif icone=='dropMenosZ':        
+        crv = pm.circle(nr=[0,1,0], ch=0,  n=name+"_cntrl")[0]
+        pm.move(0,0,-3, crv,r=1)
+        pm.makeIdentity(crv, apply=1, t=1)
+        pm.move(0,0,3, crv.scalePivot, crv.rotatePivot, r=1)
+        pm.move(0,0,1.8, crv.cv[5], r=1)
+        pm.scale([crv.cv[4], crv.cv[6]],[0.01, 1, 1], r=1)
+        pm.move(0,0,-0.5, crv.cv[1], r=1)
+        pm.move(0,0,-0.6, crv.cv[0], crv.cv[2] , r=1)
+    	crv.scale.set(cntrlSize,cntrlSize,cntrlSize*-1) 
+        pm.makeIdentity( crv, a = True, t = True, r = True, s = True, n=False )   
+    elif icone=='circuloPontaY':                
+        tempCrv = pm.circle(nr=[0,1,0], ch=0, s=6)[0]
+        pm.scale([tempCrv.cv[3], tempCrv.cv[5]],[0.25, 1, 1])
+        pm.move(0,0,-0.5, tempCrv.cv[0], tempCrv.cv[2], r=1, ls=1)
+        pm.move(0,0,1.25, tempCrv.cv[0:5], r=1, ls=1)
+        pm.move(0,0,0.5, tempCrv.cv[1], r=1, ls=1)
+        pm.scale(tempCrv.cv[0:5],[0.1, 0.1, 0.1], r=1, p=(0,0,1.25)) 
+        crv = pm.circle(nr=[0,1,0], ch=0, n=name+"_cntrl")[0]
+        pm.parent(tempCrv.getShape(), crv, r=1, s=1)
+        pm.delete(tempCrv)    
+        crv.scale.set(cntrlSize*.5,cntrlSize*.5,cntrlSize*.5)
+        pm.makeIdentity( crv, a = True, t = True, r = True, s = True, n=False )    
+
+    elif icone == 'hexagonoX':
+    	controlList = pm.circle(ch=1, n=name+"_cntrl", r=0.5)
     	crv = controlList[0]
     	history = controlList[1]
     	history.degree.set(1)
@@ -102,10 +166,9 @@ def cntrlCrv(name='cntrl', obj=None, connType=None,offsets=0, **kwargs):
     	history.normalX.set(1)
     	pm.delete(crv, ch=True)
     	crv.scale.set(cntrlSize,cntrlSize,cntrlSize) 
-        pm.makeIdentity( crv, a = True, t = True, r = True, s = True, n=False )
-    
-    elif icone == 'hexagonY':
-    	controlList = pm.circle(ch=1, n=name+"_cntrl")
+        pm.makeIdentity( crv, a = True, t = True, r = True, s = True, n=False )    
+    elif icone == 'hexagonoY':
+    	controlList = pm.circle(ch=1, n=name+"_cntrl", r=0.5)
     	crv = controlList[0]
     	history = controlList[1]
     	history.degree.set(1)
@@ -114,10 +177,9 @@ def cntrlCrv(name='cntrl', obj=None, connType=None,offsets=0, **kwargs):
     	history.normalY.set(1)
     	pm.delete(crv, ch=True)
     	crv.scale.set(cntrlSize,cntrlSize,cntrlSize) 
-        pm.makeIdentity( crv, a = True, t = True, r = True, s = True, n=False )
-    
-    elif icone == 'hexagonZ':
-    	controlList = pm.circle(ch=1, n=name+"_cntrl")
+        pm.makeIdentity( crv, a = True, t = True, r = True, s = True, n=False )   
+    elif icone == 'hexagonoZ':
+    	controlList = pm.circle(ch=1, n=name+"_cntrl", r=0.5)
     	crv = controlList[0]
     	history = controlList[1]
     	history.degree.set(1)
@@ -126,8 +188,8 @@ def cntrlCrv(name='cntrl', obj=None, connType=None,offsets=0, **kwargs):
     	crv.scale.set(cntrlSize,cntrlSize,cntrlSize) 
         pm.makeIdentity( crv, a = True, t = True, r = True, s = True, n=False )
     
-    elif icone == 'pentagonX':
-    	controlList = pm.circle(ch=1, n=name+"_cntrl")
+    elif icone == 'pentagonoX':
+    	controlList = pm.circle(ch=1, n=name+"_cntrl", r=0.5)
     	crv = controlList[0]
     	history = controlList[1]
     	history.degree.set(1)
@@ -138,8 +200,8 @@ def cntrlCrv(name='cntrl', obj=None, connType=None,offsets=0, **kwargs):
     	crv.scale.set(cntrlSize,cntrlSize,cntrlSize) 
         pm.makeIdentity( crv, a = True, t = True, r = True, s = True, n=False )
     
-    elif icone == 'pentagonY':
-    	controlList = pm.circle(ch=1, n=name+"_cntrl")
+    elif icone == 'pentagonoY':
+    	controlList = pm.circle(ch=1, n=name+"_cntrl", r=0.5)
     	crv = controlList[0]
     	history = controlList[1]
     	history.degree.set(1)
@@ -150,7 +212,7 @@ def cntrlCrv(name='cntrl', obj=None, connType=None,offsets=0, **kwargs):
     	crv.scale.set(cntrlSize,cntrlSize,cntrlSize) 
         pm.makeIdentity( crv, a = True, t = True, r = True, s = True, n=False )
     
-    elif icone == 'pentagonZ':
+    elif icone == 'pentagonoZ':
     	controlList = pm.circle(ch=1, n=name+"_cntrl")
     	crv = controlList[0]
     	history = controlList[1]
@@ -260,9 +322,26 @@ def cntrlCrv(name='cntrl', obj=None, connType=None,offsets=0, **kwargs):
     	crv = pm.curve(p=((0,4,0), (-2,2,0), (-1,2,0), (-1,-2,0), (1,-2,0), (1,2,0), (2,2,0), (0,4,0)), d=1, n=name+"_cntrl")
     	crv.rotateX.set(90)
     	crv.scale.set(cntrlSize,cntrlSize,cntrlSize) 
-        pm.makeIdentity( crv, a = True, t = True, r = True, s = True, n=False )            
+        pm.makeIdentity( crv, a = True, t = True, r = True, s = True, n=False )               
+    elif icone == "trianguloX":
+        crv=pm.curve (n=name+"_cntrl",d=1,p=[(0,0,-0.471058),(-0.471058,0,0.471058),(0.471058,0,0.471058),(0,0,-0.471058)] ,k=[0,1, 2, 3])
+        crv.rotateX.set(90)
+        crv.rotateY.set(90)
+        crv.scale.set (cntrlSize,cntrlSize,cntrlSize)
+        pm.makeIdentity (crv,apply=True,t=1,r=1,s=1,n=0)    
+    elif icone == "trianguloY":
+        crv=pm.curve(n=name+"_cntrl",d=1,p=[(0,0,-0.471058),(-0.471058,0,0.471058),(0.471058,0,0.471058),(0,0 ,-0.471058)] ,k=[0,1, 2, 3])
+        crv.scale.set (cntrlSize,cntrlSize,cntrlSize)
+        pm.makeIdentity (crv,apply=True,t=1,r=1,s=1,n=0)    
+    elif icone == "trianguloZ":
+        crv=pm.curve(n=name+"_cntrl",d=1,p=[(0,0,-0.471058),(-0.471058,0,0.471058),(0.471058,0,0.471058),(0,0 ,-0.471058)] ,k=[0,1, 2, 3])
+        crv.rotateX.set(90)
+        crv.scale.set (cntrlSize,cntrlSize,cntrlSize)
+        pm.makeIdentity (crv,apply=True,t=1,r=1,s=1,n=0)
     elif icone=='grp':
-        crv = pm.group (em=True)
+        crv = pm.group (n=name+"_cntrl", em=True)
+    else:
+        print 'shape nao reconhecido: %s' % icone
         
 #seta ordem de rotacao        
     
@@ -601,7 +680,8 @@ class RibbonBezier:
         self.ribbonDict['moveallSetup']={'nameTempl':self.name+'Moveall'}    
         self.ribbonDict['noMoveSetup']={'nameTempl':self.name+'NoMove'}    
 
-        self.ribbonDict['cntrlSetup']={'nameTempl':self.name+'Pos','icone':'circuloX','size':0.6,'color':(0,0,1)}       
+        self.ribbonDict['cntrlSetup']={'nameTempl':self.name+'Pos','icone':'grp','size':0.6,'color':(0,0,1)}       
+        self.ribbonDict['midCntrlSetup']={'nameTempl':self.name+'Pos','icone':'circuloX','size':1,'color':(0,.6,1)}       
         self.ribbonDict['cntrlTangSetup']={'nameTempl':self.name+'Tang','icone':'bola','size':0.3,'color':(0,1,1)}        
         self.ribbonDict['cntrlExtraSetup']={'nameTempl':self.name+'Extra','icone':'circuloX','size':0.2}        
 
@@ -617,8 +697,6 @@ class RibbonBezier:
             pm.delete (self.ribbonDict['moveallSetup']['nameTempl'])
         if pm.objExists(self.ribbonDict['noMoveSetup']['nameTempl']):
             pm.delete (self.ribbonDict['noMoveSetup']['nameTempl'])
-
-
                            
         ###Estrutura que nao deve ter transformacao       
         noMoveSpace = pm.group (empty=True, n=self.ribbonDict['noMoveSetup']['nameTempl'])
@@ -667,12 +745,21 @@ class RibbonBezier:
             pm.xform (anchorGrp, t=pos, ws=True)
             pm.parent (anchor[1], anchorDrn)   
             anchorList.append (anchor[1])
-                                    
-            if i==0 or i==3 or i==6:
+            print i             
+            if i==0 or i==6:
+                print '0 ou 6'
                 displaySetup= self.ribbonDict['cntrlSetup'].copy()                               
                 cntrlName = displaySetup['nameTempl']+str(i)           
                 cntrl = cntrlCrv (name=cntrlName, obj=anchor[1],**displaySetup)
+            elif i==3:
+                print '3'
+                              
+                displaySetup= self.ribbonDict['midCntrlSetup'].copy()                               
+                cntrlName = displaySetup['nameTempl']+str(i)           
+                cntrl = cntrlCrv (name=cntrlName, obj=anchor[1],**displaySetup)
+
             else:
+                print 'tang'
                 displaySetup= self.ribbonDict['cntrlTangSetup'].copy()                               
                 cntrlName = displaySetup['nameTempl']+str(i) 
                 cntrl = cntrlCrv (name=cntrlName, obj=anchor[1],**displaySetup)
@@ -697,7 +784,7 @@ class RibbonBezier:
             loc.rotate >> anchorDrn.rotate
             cntrlList.append(cntrl)
             locList.append (loc)
-        
+        print cntrlList        
         cntrlsSpace.addAttr ('cntrlsVis', at='double', dv=1, k=False, h=True)
         cntrlsSpace.addAttr ('extraCntrlsVis', at='double', dv=0, k=False, h=True)            
         cntrlList[0].addAttr ('twist', at='double', dv=0, k=True)
@@ -1509,7 +1596,8 @@ class RibbonBezierSimple:
         self.ribbonDict['moveallSetup']={'nameTempl':self.name+'Moveall'}    
         self.ribbonDict['noMoveSetup']={'nameTempl':self.name+'NoMove'}    
 
-        self.ribbonDict['cntrlSetup']={'nameTempl':self.name+'Pos','icone':'circuloX','size':0.6,'color':(0,0,1)}       
+        self.ribbonDict['cntrlSetup']={'nameTempl':self.name+'Pos','icone':'grp','size':0.6,'color':(0,0,1)}       
+        self.ribbonDict['midCntrlSetup']={'nameTempl':self.name+'Pos','icone':'circuloX','size':1,'color':(0,.6,1)}        
         self.ribbonDict['cntrlTangSetup']={'nameTempl':self.name+'Tang','icone':'bola','size':0.3,'color':(0,1,1)}        
         self.ribbonDict['cntrlExtraSetup']={'nameTempl':self.name+'Extra','icone':'circuloX','size':0.2}        
 
@@ -1568,11 +1656,21 @@ class RibbonBezierSimple:
             pm.parent (anchor[1], anchorDrn)   
             anchorList.append (anchor[1])
                                     
-            if i==0 or i==3 or i==6:
+            print i             
+            if i==0 or i==6:
+                print '0 ou 6'
                 displaySetup= self.ribbonDict['cntrlSetup'].copy()                               
                 cntrlName = displaySetup['nameTempl']+str(i)           
                 cntrl = cntrlCrv (name=cntrlName, obj=anchor[1],**displaySetup)
+            elif i==3:
+                print '3'
+                              
+                displaySetup= self.ribbonDict['midCntrlSetup'].copy()                               
+                cntrlName = displaySetup['nameTempl']+str(i)           
+                cntrl = cntrlCrv (name=cntrlName, obj=anchor[1],**displaySetup)
+
             else:
+                print 'tang'
                 displaySetup= self.ribbonDict['cntrlTangSetup'].copy()                               
                 cntrlName = displaySetup['nameTempl']+str(i) 
                 cntrl = cntrlCrv (name=cntrlName, obj=anchor[1],**displaySetup)

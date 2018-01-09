@@ -1,3 +1,4 @@
+"""
 larm=Limb(name='L_arm' )
 larm.doGuide()
 rarm=Limb(name='R_arm')
@@ -19,35 +20,37 @@ n.doGuide()
 s=Spine(name='spine')
 s.doGuide()
 
-lclav=Chain(name='L_clavicle')
+lclav=Chain(name='L_clavicle', numDiv=2, fkCntrlSetup = {'nameTempl':'L_clavicleChainFk', 'icone':'ponteiroX','size':.8,'color':(0,1,0) })
 lclav.doGuide()
-rclav=Chain(name='R_clavicle')
+rclav=Chain(name='R_clavicle', numDiv=2, fkCntrlSetup = {'nameTempl':'R_clavicleChainFk', 'icone':'ponteiroMenosX','size':.8,'color':(0,1,0) })
 rclav.mirrorConnectGuide(lclav)
 
-lleg=Limb(name='L_leg' )
+lleg=Limb(name='L_leg' ,ikCntrlSetup = {'nameTempl':'L_footIk', 'icone':'grp','size':.8,'color':(1,1,0)} )
 lleg.doGuide()
-rleg=Limb(name='R_leg')
+rleg=Limb(name='R_leg' , ikCntrlSetup = {'nameTempl':'R_footIk', 'icone':'grp','size':.8,'color':(1,1,0)})
 rleg.mirrorConnectGuide(lleg)
 
 llegShoulder=Chain(name='L_legShoulder')
 llegShoulder.doGuide()
 rlegShoulder=Chain(name='R_legShoulder')
 rlegShoulder.mirrorConnectGuide(llegShoulder)
+"""
+
 ### 
 ## guide from scene
 larm=Limb(name='L_arm' )
 larm.getGuideFromScene()
-rarm=Limb(name='R_arm')
+rarm=Limb(name='R_arm', flipAxis=True)
 rarm.getGuideFromScene()
 
 lhand=Hand(name='L_hand', fingerNum=4)
 lhand.getGuideFromScene()
-rhand=Hand(name='R_hand', fingerNum=4)
+rhand=Hand(name='R_hand', fingerNum=4, flipAxis=True)
 rhand.getGuideFromScene()
 
-lfoot=Foot(name='L_foot')
+lfoot=Foot(name='L_foot', )
 lfoot.getGuideFromScene()
-rfoot=Foot(name='R_foot')
+rfoot=Foot(name='R_foot',flipAxis=True)
 rfoot.getGuideFromScene()
 
 n=Neck(name='neck', guideDict={'moveall':[0,10,0]})
@@ -56,19 +59,19 @@ n.getGuideFromScene()
 s=Spine(name='spine')
 s.getGuideFromScene()
 
-lclav=Chain(name='L_clavicle')
+lclav=Chain(name='L_clavicle', numDiv=2, fkCntrlSetup = {'nameTempl':'L_clavicleChainFk', 'icone':'circuloX','size':1.2,'color':(0,1,0) })
 lclav.getGuideFromScene()
-rclav=Chain(name='R_clavicle')
+rclav=Chain(name='R_clavicle', numDiv=2, fkCntrlSetup = {'nameTempl':'L_clavicleChainFk', 'icone':'circuloX','size':1.2,'color':(0,1,0) }, flipAxis=True)
 rclav.getGuideFromScene()
 
-lleg=Limb(name='L_leg' )
+lleg=Limb(name='L_leg',ikCntrlSetup = {'nameTempl':'L_footIk', 'icone':'grp','size':.8,'color':(1,1,0)}  )
 lleg.getGuideFromScene()
-rleg=Limb(name='R_leg')
+rleg=Limb(name='R_leg', ikCntrlSetup = {'nameTempl':'R_footIk', 'icone':'grp','size':.8,'color':(1,1,0)}, flipAxis=True)
 rleg.getGuideFromScene()
 
-llegShoulder=Chain(name='L_legShoulder')
+llegShoulder=Chain(name='L_legShoulder' , fkCntrlSetup = {'nameTempl':'L_clavicleChainFk', 'icone':'dropY','size':.4,'color':(0,1,0) })
 llegShoulder.getGuideFromScene()
-rlegShoulder=Chain(name='R_legShoulder')
+rlegShoulder=Chain(name='R_legShoulder' , fkCntrlSetup = {'nameTempl':'L_clavicleChainFk', 'icone':'dropMenosY','size':.4,'color':(0,1,0) }, flipAxis=True)
 rlegShoulder.getGuideFromScene()
 
 ##Rig
@@ -87,10 +90,10 @@ rleg.doRig()
 llegShoulder.doRig()
 rlegShoulder.doRig()
 
-larb= RibbonBezier(name='LarmBezier', size=4.5,numJnts=16, offsetStart=0.1, offsetEnd=0.1)
+larb= RibbonBezier(name='LarmBezier', size=4.5,numJnts=10, offsetStart=0.08, offsetEnd=0.1)
 larb.doRig()
 larb.connectToLimb(larm)
-rarb= RibbonBezier(name='RarmBezier', size=4.5,numJnts=16, offsetStart=0.1, offsetEnd=0.1)
+rarb= RibbonBezier(name='RarmBezier', size=4.5,numJnts=10, offsetStart=0.1, offsetEnd=0.08)
 rarb.doRig()
 rarb.connectToLimb(rarm)
 
@@ -101,6 +104,7 @@ rlrb= RibbonBezier(name='RlegBezier', size=6.5 ,offsetStart=0.1, offsetEnd=0.1)
 rlrb.doRig()
 rlrb.connectToLimb(rleg)
 
+#"""
 pm.parentConstraint (s.endTipJnt, lclav.moveall, mo=True)
 pm.parentConstraint (s.endTipJnt, rclav.moveall, mo=True)
 pm.parentConstraint (s.endTipJnt, n.moveall, mo=True)
@@ -115,7 +119,7 @@ pm.parentConstraint (llegShoulder.jntList[-1], lleg.moveall, mo=True)
 pm.parentConstraint (lfoot.limbConnectionCntrl, lleg.ikCntrl, mo=True)
 pm.parentConstraint (rfoot.limbConnectionCntrl, rleg.ikCntrl, mo=True)
 
-
+"""
 pm.parent ( lclav.moveall, s.endTipJnt)
 pm.parent ( rclav.moveall, s.endTipJnt)
 pm.parent ( n.moveall, s.endTipJnt)
@@ -129,7 +133,7 @@ pm.parent ( rleg.moveall, rlegShoulder.jntList[-1])
 pm.parent ( lleg.moveall, llegShoulder.jntList[-1])
 pm.parent ( lleg.ikCntrl, lfoot.limbConnectionCntrl)
 pm.parent (rleg.ikCntrl, rfoot.limbConnectionCntrl)
-
+"""
 
 createSpc (None, 'global')
 createSpc (larm.lastJnt, 'lhand')
