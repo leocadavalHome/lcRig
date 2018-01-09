@@ -1496,7 +1496,7 @@ class Spine:
         #dicionario q determina a aparencia dos controles
         self.spineDict={'name':name, 'axis':axis, 'flipAxis':flipAxis}
         self.spineDict['moveallSetup']={'nameTempl':self.name+'MoveAll', 'icone':'grp','size':1.8,'color':(1,1,0) }    
-        self.spineDict['hipCntrlSetup'] = {'nameTempl':self.name+'Hip', 'icone':'hexagonoY','size':5.5,'color':(0,0,1) }
+        self.spineDict['hipCntrlSetup'] = {'nameTempl':self.name+'Hip', 'icone':'quadradoY','size':5.5,'color':(0,0,1) }
         self.spineDict['spineFkCntrlSetup'] = {'nameTempl':self.name+'SpineFk', 'icone':'circuloPontaY','size':4,'color':(0,1,0) }      
         self.spineDict['startFkCntrlSetup'] = {'nameTempl':self.name+'StartFk', 'icone':'circuloPontaY','size':3.0,'color':(1,1,0)}
         self.spineDict['midFkOffsetCntrlSetup'] = {'nameTempl':self.name+'MidFkOff', 'icone':'circuloY', 'size':2.5, 'color':(1,1,0) }
@@ -2072,8 +2072,8 @@ class Neck:
        #parametros de aparencia dos controles
         self.neckDict={'name':name, 'axis':axis, 'flipAxis':flipAxis}
         self.neckDict['moveAllCntrlSetup'] = {'nameTempl':name+'Moveall', 'icone':'circuloX','size':1,'color':(0,1,0) }
-        self.neckDict['startCntrlSetup'] = {'nameTempl':'Neck', 'icone':'dropZ','size':.4,'color':(0,1,0) }
-        self.neckDict['endCntrlSetup'] = {'nameTempl':'Head', 'icone':'cubo', 'size':1, 'color':(0,1,0)}
+        self.neckDict['startCntrlSetup'] = {'nameTempl':'Neck', 'icone':'circuloY','size':3,'color':(0,1,0) }
+        self.neckDict['endCntrlSetup'] = {'nameTempl':'Head', 'icone':'circuloZ', 'size':2, 'color':(0,1,0)}
 
         self.neckDict['moveAllGuideSetup'] = {'nameTempl':name+'Moveall'}
         self.neckDict['startGuideSetup'] = {'nameTempl':'neck', 'size':1,'color':(0,1,0) }

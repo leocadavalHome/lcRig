@@ -45,7 +45,7 @@ rarm.getGuideFromScene()
 
 lhand=Hand(name='L_hand', fingerNum=4)
 lhand.getGuideFromScene()
-rhand=Hand(name='R_hand', fingerNum=4, flipAxis=True)
+rhand=Hand(name='R_hand', fingerNum=4)
 rhand.getGuideFromScene()
 
 lfoot=Foot(name='L_foot', )
@@ -134,7 +134,9 @@ pm.parent ( lleg.moveall, llegShoulder.jntList[-1])
 pm.parent ( lleg.ikCntrl, lfoot.limbConnectionCntrl)
 pm.parent (rleg.ikCntrl, rfoot.limbConnectionCntrl)
 """
-
+if pm.objExists ('spaces'):
+    pm.delete ('spaces')
+    
 createSpc (None, 'global')
 createSpc (larm.lastJnt, 'lhand')
 createSpc (rarm.lastJnt, 'rhand')

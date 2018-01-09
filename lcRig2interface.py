@@ -227,7 +227,8 @@ def saveCntrlsShape():
                 for i in range (len (shp.cv)):
                     pointList.append (pm.pointPosition (shp.cv[i], l=True))
                 tempDict[shp]=pointList
-        cntrlShapeDict[obj.name()]=tempDict          
+        cntrlShapeDict[obj.name()]=tempDict 
+    print   cntrlShapeDict           
     with open(filename, 'wb') as f:
         pickle.dump(cntrlShapeDict, f)
     print 'save ok'
@@ -235,10 +236,12 @@ def saveCntrlsShape():
 def loadCntrlShape():
     filename= 'C:/Users/vzprojeto/Documents/leo/cntrls.shp'
     cntrlShapeDict={}
-    with open(filename, 'rb') as f:
-        cntrlShapeDict  = pickle.load(f)
-        
+    with open(filename,'rb') as f:
+        print 'entrou'
+        cntrlShapeDict  =  pickle.load(f)
+    print    cntrlShapeDict     
     for obj in cntrlShapeDict:
+        print obj
         for s in cntrlShapeDict[obj]:
             shp = pm.PyNode(s)
             for i in range (len (shp.cv)):
