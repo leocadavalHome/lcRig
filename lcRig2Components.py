@@ -28,8 +28,8 @@ def cntrlCrv(name='cntrl', obj=None, connType=None,offsets=0, **kwargs):
         pm.makeIdentity( crv, a = True, t = True, r = True, s = True, n=False )
     elif icone=='bola':
         crv = pm.circle (n=name+"_cntrl" , c=(0,0,0),nr=(0,1,0),sw=360,r=0.5,d=3,ut=0,ch=0)[0]
-        crv1 = pm.circle (c=(0,0,0),nr=(1,0,0),sw=360,r=0.5,d=3,ut=0,ch=0)[0]
-        crv2 = pm.circle (c=(0,0,0),nr=(0,0,1),sw=360,r=0.5,d=3,ut=0,ch=0)[0]
+        crv1 = pm.circle (n=name+"aux1" , c=(0,0,0),nr=(1,0,0),sw=360,r=0.5,d=3,ut=0,ch=0)[0]
+        crv2 = pm.circle (n=name+"aux2" , c=(0,0,0),nr=(0,0,1),sw=360,r=0.5,d=3,ut=0,ch=0)[0]
         pm.parent ([crv1.getShape(),crv2.getShape()], crv, shape=True, r=True)
         pm.delete (crv1, crv2)
         crv.scale.set (cntrlSize,cntrlSize,cntrlSize)
@@ -49,6 +49,10 @@ def cntrlCrv(name='cntrl', obj=None, connType=None,offsets=0, **kwargs):
     elif icone=='seta':
         crv=pm.curve (d=1, p=((-1,0,0),(-1,0,-3),(-2,0,-3),(0,0,-5),(2,0,-3),(1,0,-3),(1,0,0)),k=[0,1,2,3,4,5,6])
         crv.scale.set(cntrlSize,cntrlSize,cntrlSize) 
+        pm.makeIdentity( crv, a = True, t = True, r = True, s = True, n=False ) 
+    elif icone == 'cog':
+        crv = pm.curve(n=name+"_cntrl", d=1, p=[(-4,0,-4), (4,0,-4), (4,0,3), (0,0,5), (-4,0,3), (-4,0,-4)])
+        crv.scale.set(cntrlSize*.1,cntrlSize*.1,cntrlSize*.1)
         pm.makeIdentity( crv, a = True, t = True, r = True, s = True, n=False ) 
     elif icone == "ponteiroX":
         crv=pm.curve(n=name+"_cntrl",d=1,p=[(0, 0, 0),(1.691495,1.691495,0),(1.697056, 2.537859, 0),(2.545584, 2.545584, 0),(2.545584, 1.707095, 0),(1.691504, 1.692763, 0)], k=[0 ,1,2, 3, 4, 5])
@@ -144,7 +148,7 @@ def cntrlCrv(name='cntrl', obj=None, connType=None,offsets=0, **kwargs):
     	crv.scale.set(cntrlSize,cntrlSize,cntrlSize*-1) 
         pm.makeIdentity( crv, a = True, t = True, r = True, s = True, n=False )   
     elif icone=='circuloPontaY':                
-        tempCrv = pm.circle(nr=[0,1,0], ch=0, s=6)[0]
+        tempCrv = pm.circle(n=name+"Aux", nr=[0,1,0], ch=0, s=6)[0]
         pm.scale([tempCrv.cv[3], tempCrv.cv[5]],[0.25, 1, 1])
         pm.move(0,0,-0.5, tempCrv.cv[0], tempCrv.cv[2], r=1, ls=1)
         pm.move(0,0,1.25, tempCrv.cv[0:5], r=1, ls=1)
@@ -458,13 +462,12 @@ def cntrlCrv(name='cntrl', obj=None, connType=None,offsets=0, **kwargs):
     
     return (crv)
 
-def createSpc (driver, name):
+def createSpc (driver, name, type=None):
 	drvGrp = pm.group (empty=True, n=name+'_drv')
 	if driver:
 		pm.parentConstraint (driver, drvGrp)
 	spcGrp = pm.group (empty=True, n=name+'_spc')
-	pm.parent (spcGrp, drvGrp)
-	
+	pm.parent (spcGrp, drvGrp) 
 	if not pm.objExists('spaces'):
 	    spcs =  pm.group ( name+'_drv', n='spaces' )
 	    if not pm.objExists('MOVEALL'):
@@ -474,13 +477,17 @@ def createSpc (driver, name):
 	else:
 	    pm.parent ( name+'_drv', 'spaces')
         
-def addSpc (target, spaceList, switcher, type):	
+def addSpc (target, spaceList, switcher, type='parent', posSpc=None):	
     for space in spaceList:
     	if type=='parent':
     		cns = pm.parentConstraint (space+'_spc', switcher, mo=True)
     	elif type=='orient':
-    		cns =  pm.orientConstraint (space+'_spc', switcher)
-    	
+    		cns =  pm.orientConstraint (space+'_spc', switcher, mo=True)
+    		if posSpc:
+    		     pm.pointConstraint  (posSpc, switcher, mo=True)
+    		else:
+                 pm.pointConstraint  (target.getParent(2), switcher, mo=True)
+                    	   
     	if target.hasAttr('spcSwitch'):
     		enumTxt = target.spcSwitch.getEnums()
     		connects = target.spcSwitch.connections(d=True, s=False, p=True)
@@ -537,33 +544,6 @@ def makeJoint(name='joint', matrix=None, obj=None, connectToLast=False):
         pm.xform (jnt, m = m, ws=True) 
     pm.makeIdentity (jnt, apply=True, r=1, t=0, s=0, n=0, pn=0)
     return jnt       
-        
-def saveCntrlsShape(filename= 'd:/cntrls.shp'):
-	userSel = pm.ls (sl=True)
-	sel=[x for x in userSel if '_cntrl' in x.name()]
-	cntrlShapeDict={}
-	
-	for obj in sel:
-	    print obj
-	    if pm.nodeType (obj.getShape())=='nurbsCurve':
-	        pointList=[]
-	        for i in range (len (obj.cv)):
-	            pointList.append (pm.pointPosition (obj.cv[i], l=True))
-	            cntrlShapeDict[obj]=pointList
-	with open(filename, 'wb') as f:
-	    pickle.dump(cntrlShapeDict, f)    
-
-def loadCntrlShape(filename= 'd:/cntrls.shp'):	
-	cntrlShapeDict={}
-	print cntrlShapeDict  
-		    
-	with open(filename, 'rb') as f:
-	    cntrlShapeDict  = pickle.load(f)
-	print cntrlShapeDict    
-	for obj in cntrlShapeDict:
-	    print obj
-	    for i in range (len (obj.cv)):
-	        pm.xform (obj.cv[i], t=cntrlShapeDict[obj][i])
 	                
 class twistExtractor:
     """

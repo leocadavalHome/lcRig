@@ -1,6 +1,68 @@
 import pymel.core as pm
 import maya.api.OpenMaya as om
 
+class Moveall:
+    """
+    cria um moveall com os grupos determinados
+        Parametros: 
+            name (string): nome do personagem            
+            connType (string): determina se os sistemas ficarao filhos dos controles 
+                               ou numa pasta separadas ligados por constraint 
+    
+    """
+    
+    def __init__(self, name='character',connType='parent', **kwargs):
+        self.name=name
+        self.conn=connType
+        self.guideGrp=None
+                
+    def doGuide(self):
+        self.guideMoveall = cntrlCrv(name=self.name+'GuideMoveall', icone='circuloPontaY', size=8, color=(1,0,0))
+        if pm.objExists('GUIDES'):
+            self.guideGrp=pm.PyNode('GUIDES')
+        else:    
+            self.guideGrp = pm.group (em=True, n='GUIDES')
+        pm.parent (self.guideGrp, self.guideMoveall)
+                
+    def doRig(self):
+        if not self.guideGrp:
+            self.doGuide()
+            
+        self.moveall3 = cntrlCrv(name=self.name+'Moveall3', icone='circuloPontaY', size=8)
+        self.moveall2 = cntrlCrv(name=self.name+'Moveall2', icone='circuloPontaY', size=7)
+        self.moveall = cntrlCrv(name=self.name+'Moveall', icone='circuloPontaY', size=6)
+        
+        self.moveall.getParent().setParent(self.moveall2)
+        self.moveall2.getParent().setParent(self.moveall3)
+ 
+        if pm.objExists('MOVEALL'):
+            self.moveallGrp = pm.PyNode('MOVEALL')
+        else:    
+            self.moveallGrp = pm.group (em=True, n='MOVEALL')
+        print self.moveallGrp
+        if pm.objExists('NOMOVE'):
+            self.nomoveGrp=pm.PyNode('NOMOVE')
+        else:    
+            self.nomoveGrp = pm.group (em=True, n='NOMOVE')
+                     
+        self.dataGrp = pm.group (em=True, n='DATA')  
+        self.meshGrp = pm.group (em=True, n='MESH')  
+       
+        #aqui ver se eh melhor ter o o grupo MOVEALL na pasta DATA ou filho dos controles moveall
+        #por default vai
+        self.guideGrp.setParent (self.dataGrp)
+        self.nomoveGrp.setParent (self.dataGrp)
+        rigGrp = pm.group (self.moveall3.getParent(),self.dataGrp,self.meshGrp,  n=self.name.upper())
+
+        if self.conn=='parent':
+            self.moveallGrp.setParent(self.moveall)
+        else:
+            self.moveallGrp.setParent(self.dataGrp)   
+        
+        pm.delete (self.guideMoveall.getParent())
+        self.guideGrp.visibility.set(0)
+        
+                    
 class Limb():
     """
         Cria um Limb
@@ -1313,7 +1375,7 @@ class Foot:
         pm.move (.8,0,0, baseCntrl, r=True, os=True)
         pm.xform (baseCntrl, rp=ankle, ws=True)
         pm.scale (baseCntrl, [1,1,.5], r=True)
-        pm.makeIdentity (baseCntrl, apply=True, r=0, t=0, s=1, n=0, pn=0)
+        pm.makeIdentity (baseCntrl, apply=True, r=0, t=1, s=1, n=0, pn=0)
         baseCntrl.addAttr ('extraRollCntrls',min=0, max=1, dv=0, k=1)
         
         #slidePivot
@@ -1496,7 +1558,7 @@ class Spine:
         #dicionario q determina a aparencia dos controles
         self.spineDict={'name':name, 'axis':axis, 'flipAxis':flipAxis}
         self.spineDict['moveallSetup']={'nameTempl':self.name+'MoveAll', 'icone':'grp','size':1.8,'color':(1,1,0) }    
-        self.spineDict['hipCntrlSetup'] = {'nameTempl':self.name+'Hip', 'icone':'quadradoY','size':5.5,'color':(0,0,1) }
+        self.spineDict['hipCntrlSetup'] = {'nameTempl':self.name+'Hip', 'icone':'cog','size':5.5,'color':(0,0,1) }
         self.spineDict['spineFkCntrlSetup'] = {'nameTempl':self.name+'SpineFk', 'icone':'circuloPontaY','size':4,'color':(0,1,0) }      
         self.spineDict['startFkCntrlSetup'] = {'nameTempl':self.name+'StartFk', 'icone':'circuloPontaY','size':3.0,'color':(1,1,0)}
         self.spineDict['midFkOffsetCntrlSetup'] = {'nameTempl':self.name+'MidFkOff', 'icone':'circuloY', 'size':2.5, 'color':(1,1,0) }
@@ -1782,7 +1844,8 @@ class Spine:
         
         
         #e parenteia todo mundo
-        pm.parent (twistExtractor1.extractorGrp, twistExtractor2.extractorGrp, spineRibbon.moveall,self.midIkCntrl.getParent(),self.hipCntrl.getParent(), self.moveall)
+        pm.parent (twistExtractor1.extractorGrp, twistExtractor2.extractorGrp, spineRibbon.moveall, self.hipCntrl)
+        pm.parent (self.midIkCntrl.getParent(),self.hipCntrl.getParent(), self.moveall)
 
 
         #conecta os twist extractors nos twists do ribbon

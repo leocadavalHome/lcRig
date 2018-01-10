@@ -171,7 +171,6 @@ def findSkinCluster(mesh):
     return skincluster
 
 def saveSkinning(mesh,path):
-    print 'saving...'
     dataDict ={} 
     skincluster = findSkinCluster(mesh)
     if skincluster!=None:     
@@ -185,10 +184,9 @@ def saveSkinning(mesh,path):
     
     with open(path, 'wb') as handle:
         pickle.dump(dataDict, handle, protocol=pickle.HIGHEST_PROTOCOL)
-    print 'saving ok!'
+    print 'skin saving ok!'
     
 def loadSkinning(mesh,path):
-    print 'loading ok!'
     skincluster = findSkinCluster(mesh)
     
     with open(path, 'rb') as handle:
@@ -206,7 +204,7 @@ def loadSkinning(mesh,path):
             for vtx in dataDict[infl]:
                 pm.setAttr (skincluster.name()+'.weightList['+str(vtx[0])+'].weights['+str (jointDict[infl]) +']', vtx[1])
         skincluster.setNormalizeWeights(1)
-        print 'loading ok!'    
+        print 'skin loading ok!'    
              
 #mesh= 'corpo'
 #path = 'C:/Users/vzprojeto/Documents/leo/skin.pickle'
@@ -214,10 +212,9 @@ def loadSkinning(mesh,path):
 #pm.skinCluster (jnts, mesh)
 #loadSkinning(mesh,path)
 
-def saveCntrlsShape():
-    userSel = pm.ls (sl=True)
-    sel=[x for x in userSel if '_cntrl' in x.name()]    
-    filename= 'C:/Users/vzprojeto/Documents/leo/cntrls.shp'
+def saveCntrlsShape(objs, path):
+    sel=[x for x in objs if '_cntrl' in x.name()]    
+    filename= path
     cntrlShapeDict={}
     for obj in sel:
         tempDict={}
@@ -226,23 +223,21 @@ def saveCntrlsShape():
                 pointList=[]
                 for i in range (len (shp.cv)):
                     pointList.append (pm.pointPosition (shp.cv[i], l=True))
-                tempDict[shp]=pointList
+                tempDict[shp.name()]=pointList
         cntrlShapeDict[obj.name()]=tempDict 
-    print   cntrlShapeDict           
     with open(filename, 'wb') as f:
         pickle.dump(cntrlShapeDict, f)
-    print 'save ok'
-    
-def loadCntrlShape():
-    filename= 'C:/Users/vzprojeto/Documents/leo/cntrls.shp'
+    print 'cntrl save ok'
+
+def loadCntrlShape(path):
     cntrlShapeDict={}
+    filename= path
     with open(filename,'rb') as f:
-        print 'entrou'
         cntrlShapeDict  =  pickle.load(f)
-    print    cntrlShapeDict     
     for obj in cntrlShapeDict:
-        print obj
         for s in cntrlShapeDict[obj]:
             shp = pm.PyNode(s)
-            for i in range (len (shp.cv)):
-                pm.xform (shp.cv[i], t=cntrlShapeDict[obj][s][i])
+            if len (shp.cv) == len(cntrlShapeDict[obj][s]):
+                for i in range (len (shp.cv)):
+                    pm.xform (shp.cv[i], t=cntrlShapeDict[obj][s][i])
+    print 'cntrl load ok'        

@@ -104,7 +104,7 @@ rlrb= RibbonBezier(name='RlegBezier', size=6.5 ,offsetStart=0.1, offsetEnd=0.1)
 rlrb.doRig()
 rlrb.connectToLimb(rleg)
 
-#"""
+"""
 pm.parentConstraint (s.endTipJnt, lclav.moveall, mo=True)
 pm.parentConstraint (s.endTipJnt, rclav.moveall, mo=True)
 pm.parentConstraint (s.endTipJnt, n.moveall, mo=True)
@@ -118,8 +118,8 @@ pm.parentConstraint (rlegShoulder.jntList[-1], rleg.moveall, mo=True)
 pm.parentConstraint (llegShoulder.jntList[-1], lleg.moveall, mo=True)
 pm.parentConstraint (lfoot.limbConnectionCntrl, lleg.ikCntrl, mo=True)
 pm.parentConstraint (rfoot.limbConnectionCntrl, rleg.ikCntrl, mo=True)
-
 """
+
 pm.parent ( lclav.moveall, s.endTipJnt)
 pm.parent ( rclav.moveall, s.endTipJnt)
 pm.parent ( n.moveall, s.endTipJnt)
@@ -133,7 +133,7 @@ pm.parent ( rleg.moveall, rlegShoulder.jntList[-1])
 pm.parent ( lleg.moveall, llegShoulder.jntList[-1])
 pm.parent ( lleg.ikCntrl, lfoot.limbConnectionCntrl)
 pm.parent (rleg.ikCntrl, rfoot.limbConnectionCntrl)
-"""
+
 if pm.objExists ('spaces'):
     pm.delete ('spaces')
     
@@ -157,3 +157,6 @@ addSpc (target=rarm.poleVec, spaceList=['global','chest','cog','rclav'], switche
 addSpc (target=lleg.poleVec, spaceList=['global','chest','cog'], switcher=lleg.poleVec.getParent(), type='parent')
 addSpc (target=rleg.poleVec, spaceList=['global','chest','cog'], switcher=rleg.poleVec.getParent(), type='parent')
 addSpc (target=s.endIkCntrl, spaceList=['global','hip', 'cog'], switcher=s.endIkCntrl.getParent(), type='parent')
+addSpc (target=n.endCntrl, spaceList=['global','hip','chest','cog', 'neck'], switcher=n.endCntrl.getParent(), type='orient', posSpc=n.startJnt)
+addSpc (target=larm.endCntrl, spaceList=['global','hip','chest','cog', 'lclav'], switcher=larm.endCntrl.getParent(), type='orient', posSpc=lclav.jntList[-1])
+addSpc (target=rarm.endCntrl, spaceList=['global','hip','chest','cog', 'rclav'], switcher=rarm.endCntrl.getParent(), type='orient', posSpc=rclav.jntList[-1])
