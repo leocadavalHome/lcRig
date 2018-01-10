@@ -1,6 +1,68 @@
 import pymel.core as pm
 import maya.api.OpenMaya as om
 
+class Moveall:
+    """
+    cria um moveall com os grupos determinados
+        Parametros: 
+            name (string): nome do personagem            
+            connType (string): determina se os sistemas ficarao filhos dos controles 
+                               ou numa pasta separadas ligados por constraint 
+    
+    """
+    
+    def __init__(self, name='character',connType='parent', **kwargs):
+        self.name=name
+        self.conn=connType
+        self.guideGrp=None
+                
+    def doGuide(self):
+        self.guideMoveall = cntrlCrv(name=self.name+'GuideMoveall', icone='circuloPontaY', size=8, color=(1,0,0))
+        if pm.objExists('GUIDES'):
+            self.guideGrp=pm.PyNode('GUIDES')
+        else:    
+            self.guideGrp = pm.group (em=True, n='GUIDES')
+        pm.parent (self.guideGrp, self.guideMoveall)
+                
+    def doRig(self):
+        if not self.guideGrp:
+            self.doGuide()
+            
+        self.moveall3 = cntrlCrv(name=self.name+'Moveall3', icone='circuloPontaY', size=8)
+        self.moveall2 = cntrlCrv(name=self.name+'Moveall2', icone='circuloPontaY', size=7)
+        self.moveall = cntrlCrv(name=self.name+'Moveall', icone='circuloPontaY', size=6)
+        
+        self.moveall.getParent().setParent(self.moveall2)
+        self.moveall2.getParent().setParent(self.moveall3)
+ 
+        if pm.objExists('MOVEALL'):
+            self.moveallGrp = pm.PyNode('MOVEALL')
+        else:    
+            self.moveallGrp = pm.group (em=True, n='MOVEALL')
+        print self.moveallGrp
+        if pm.objExists('NOMOVE'):
+            self.nomoveGrp=pm.PyNode('NOMOVE')
+        else:    
+            self.nomoveGrp = pm.group (em=True, n='NOMOVE')
+                     
+        self.dataGrp = pm.group (em=True, n='DATA')  
+        self.meshGrp = pm.group (em=True, n='MESH')  
+       
+        #aqui ver se eh melhor ter o o grupo MOVEALL na pasta DATA ou filho dos controles moveall
+        #por default vai
+        self.guideGrp.setParent (self.dataGrp)
+        self.nomoveGrp.setParent (self.dataGrp)
+        rigGrp = pm.group (self.moveall3.getParent(),self.dataGrp,self.meshGrp,  n=self.name.upper())
+
+        if self.conn=='parent':
+            self.moveallGrp.setParent(self.moveall)
+        else:
+            self.moveallGrp.setParent(self.dataGrp)   
+        
+        pm.delete (self.guideMoveall.getParent())
+        self.guideGrp.visibility.set(0)
+        
+                    
 class Limb():
     """
         Cria um Limb
@@ -12,7 +74,7 @@ class Limb():
             endCntrl (string): nome
             poleCntrl (string): nome
             flipAxis (boolean): se o eixo eh flipado ao longo do bone
-            handJoint (boolean): se exite joint da mao
+            lastJoint (boolean): se exite joint da mao
             axis (string:'X','Y' ou 'Z'): eixo ao longo do bone
                  
     """  
@@ -22,73 +84,164 @@ class Limb():
  
     #self.twoJoints=False RETIREI CODIGO DE ARTICULACAO DE DOIS JOINTS. PRECISA FAZER IMPLEMENTACAO COMPLETA 
                  
-    def __init__ (self,name='limb',axis='X',flipAxis=False,handJoint=True, **kwargs):
-
-        self.limbDict={'name':name,
-                       'flipAxis':flipAxis,
-                       'handJoint':handJoint,
-                       'axis':axis } #valores default
-
-        self.limbDict.update(kwargs) # atualiza com o q foi entrado
-        self.GuideColor=(1,0,1)
+    def __init__ (self,name='limb',axis='X',flipAxis=False, lastJoint=True, **kwargs):
+        
         self.name = name
         self.flipAxis = flipAxis
         self.axis = axis
-        self.handJoint = handJoint
-        self.limbGuideDict = {'moveall':[0,0,0],'start':[0,0,0], 'mid':[3,0,-1],'end':[6,0,0], 'hand':[7,0,0]} 
-        self.startGuide=None   
-        self.endGuide=None   
-        self.midGuide=None   
-        self.handGuide=None
-        self.limbGuideMoveall=None
-                   
-        ##setups visuais dos controles
-        self.limbDict['moveAll1CntrlSetup']={'nameTempl':self.name+'moveAll1', 'icone':'circuloX','size':1.8,'color':(1,1,0) }    
-        self.limbDict['ikCntrlSetup'] = {'nameTempl':self.name+'Ik', 'icone':'bola','size':1,'color':(1,1,0) }    
-        self.limbDict['startCntrlSetup'] = {'nameTempl':self.name+'FkStart', 'icone':'cubo','size':0.5,'color':(0,1,0) }
-        self.limbDict['midCntrlSetup'] = {'nameTempl':self.name+'FkMid', 'icone':'cubo', 'size':0.5, 'color':(0,1,0)}
-        self.limbDict['endCntrlSetup'] = {'nameTempl':self.name+'FkEnd', 'icone':'cubo', 'size':0.5, 'color':(0,1,0)}
-        self.limbDict['poleVecCntrlSetup'] = {'nameTempl':self.name+'PoleVec', 'icone':'bola', 'size':0.4, 'color':(1,0,0)}
+        self.lastJoint = lastJoint
+
+        self.guideMoveall=None
 
         ##IMPLEMENTAR padroes de nome 
+        self.guideSulfix='_guide'
+        self.jntSulfix='_jnt'
+        self.jxtSulfix='_jxt'
+        self.tipJxtSulfix='Tip_jxt'
+        self.grpSulfix='_grp'
+        self.GuideColor=(1,0,1)
+
+        self.limbDict={'name':name,
+                       'flipAxis':flipAxis,
+                       'lastJoint':lastJoint,
+                       'axis':axis}
+                   
+        ##setups visuais dos controles
+        self.limbDict['moveAll1CntrlSetup']={'nameTempl':self.name+'MoveAll1', 'icone':'grp','size':1.8,'color':(1,1,0) }    
+        self.limbDict['ikCntrlSetup'] = {'nameTempl':self.name+'Ik', 'icone':'circuloX','size':1,'color':(1,0,0) }    
+        self.limbDict['startCntrlSetup'] = {'nameTempl':self.name+'FkStart', 'icone':'circuloX','size':1.5,'color':(0,1,0) }
+        self.limbDict['midCntrlSetup'] = {'nameTempl':self.name+'FkMid', 'icone':'circuloX', 'size':1.5, 'color':(0,1,0)}
+        self.limbDict['endCntrlSetup'] = {'nameTempl':self.name+'FkEnd', 'icone':'circuloX', 'size':1.5, 'color':(0,1,0)}
+        self.limbDict['poleVecCntrlSetup'] = {'nameTempl':self.name+'PoleVec', 'icone':'bola', 'size':0.4, 'color':(1,0,0)}
+
+        self.limbDict['startJntSetup'] = {'nameTempl':self.name+'Start', 'size':1}
+        self.limbDict['midJntSetup'] = {'nameTempl':self.name+'Mid', 'size':1}
+        self.limbDict['endJntSetup'] = {'nameTempl':self.name+'End', 'size':1}
+        self.limbDict['lastJntSetup'] = {'nameTempl':self.name+'Last', 'size':1}
+        
+        self.limbDict['moveallGuideSetup']={'nameTempl':self.name+'MoveAll1','size':1, 'color':(1,1,0)}
+        self.limbDict['startGuideSetup'] = {'nameTempl':self.name+'Start', 'size':1, 'color':(1,1,0)}
+        self.limbDict['midGuideSetup'] = {'nameTempl':self.name+'Mid', 'size':1, 'color':(1,1,0)}
+        self.limbDict['endGuideSetup'] = {'nameTempl':self.name+'End', 'size':1, 'color':(1,1,0)}
+        self.limbDict['lastGuideSetup'] = {'nameTempl':self.name+'Last', 'size':1, 'color':(1,1,0)}
+        self.limbDict['guideDict']={}
+        #esquema para podermos entrar somente algumas keys do GuideDict, o restante e completada com os valores default
+        self.limbGuideDict = {'moveall':[0,0,0],'start':[0,0,0], 'mid':[3,0,-1],'end':[6,0,0], 'last':[7,0,0]} 
+        self.limbDict.update(kwargs) 
+        self.limbGuideDict.update(self.limbDict['guideDict']) 
+        self.limbDict['guideDict']=self.limbGuideDict.copy()
         #self.limbDict['nodeTree'] = {}
         #self.limbDict['nameConventions'] = None
 
-    def doGuide(self,**kwargs): 
+    def doGuide(self,**kwargs):        
+        self.limbGuideDict =  self.limbDict['guideDict'].copy()
         self.limbGuideDict.update(kwargs)
-        ## cria guia se não existir  
-        #IMPLEMENTAR: se nao tiver valores pro guideDict, faz guide padrao
-        if pm.objExists(self.name+'Moveall_guide'):
-            pm.delete (self.name+'Moveall_guide')
-                
-        self.limbGuideMoveall=pm.group(n=self.name+'Moveall_guide', em=True)
-        self.startGuide = pm.spaceLocator (n=self.name+'Start_guide', p=(0,0,0))
+        
+        ## cria guia se não existir 
+        guideName=self.limbDict['moveallGuideSetup']['nameTempl']+self.guideSulfix
+        if pm.objExists(guideName):
+            pm.delete (guideName)                
+        self.guideMoveall=pm.group(n=guideName, em=True)
+
+        if not pm.objExists('GUIDES'):
+            pm.group ( self.guideMoveall, n='GUIDES' )
+        else:
+            pm.parent ( self.guideMoveall, 'GUIDES')
+                       
+        guideName=self.limbDict['startGuideSetup']['nameTempl']+self.guideSulfix
+        self.startGuide = pm.spaceLocator (n=guideName, p=(0,0,0))
         pm.xform (self.startGuide, t=self.limbGuideDict['start'], ws=True)
         self.startGuide.displayHandle.set(1)
-        self.midGuide = pm.spaceLocator (n=self.name+'Mid_guide', p=(0,0,0))
+
+        guideName=self.limbDict['midGuideSetup']['nameTempl']+self.guideSulfix
+        self.midGuide = pm.spaceLocator (n=guideName, p=(0,0,0))
         pm.xform (self.midGuide, t=self.limbGuideDict['mid'], ws=True)
         self.midGuide.displayHandle.set(1)
-        self.endGuide = pm.spaceLocator (n=self.name+'End_guide', p=(0,0,0))
+
+        guideName=self.limbDict['endGuideSetup']['nameTempl']+self.guideSulfix
+        self.endGuide = pm.spaceLocator (n=guideName, p=(0,0,0))
         pm.xform (self.endGuide, t=self.limbGuideDict['end'], ws=True)
         self.endGuide.displayHandle.set(1)
         
-        pm.parent (self.startGuide, self.midGuide, self.endGuide, self.limbGuideMoveall)
+        pm.parent (self.startGuide, self.midGuide, self.endGuide, self.guideMoveall)
                
-        if self.handJoint:
-            self.handGuide = pm.spaceLocator (n=self.name+'Hand_guide', p=(0,0,0))
-            pm.xform (self.handGuide, t=self.limbGuideDict['hand'], ws=True)
-            pm.parent (self.handGuide, self.endGuide)
-            self.handGuide.displayHandle.set(1)
+        if self.lastJoint:
+            guideName=self.limbDict['lastGuideSetup']['nameTempl']+self.guideSulfix
+            self.lastGuide = pm.spaceLocator (n=guideName, p=(0,0,0))
+            pm.xform (self.lastGuide, t=self.limbGuideDict['last'], ws=True)
+            pm.parent (self.lastGuide, self.endGuide)
+            self.lastGuide.displayHandle.set(1)
             
         #cria a curva da direcao do plano
         arrow=cntrlCrv(obj=self.startGuide,name=self.name+'PlaneDir',icone='seta', size=.35, color=(0,1,1))
         arrow.getParent().setParent(self.startGuide)
         pm.aimConstraint(self.endGuide,arrow, weight=1, aimVector=(1, 0 ,0) , upVector=(0, 0, -1),worldUpObject=self.midGuide, worldUpType='object')
 
-        self.limbGuideMoveall.translate.set( self.limbGuideDict['moveall'])
-                     
+        self.guideMoveall.translate.set( self.limbGuideDict['moveall'])
+
+    def getGuideFromScene(self):      
+        try:
+            guideName=self.limbDict['moveallGuideSetup']['nameTempl']+self.guideSulfix              
+            self.guideMoveall=pm.PyNode(guideName)
+            
+            guideName=self.limbDict['startGuideSetup']['nameTempl']+self.guideSulfix
+            self.startGuide = pm.PyNode(guideName)
+    
+            guideName=self.limbDict['midGuideSetup']['nameTempl']+self.guideSulfix
+            self.midGuide = pm.PyNode(guideName)
+    
+            guideName=self.limbDict['endGuideSetup']['nameTempl']+self.guideSulfix
+            self.endGuide =pm.PyNode(guideName)
+                   
+            if self.lastJoint:
+                guideName=self.limbDict['lastGuideSetup']['nameTempl']+self.guideSulfix
+                self.lastGuide = pm.PyNode(guideName)
+
+            print 'guide do %s OK!' % self.name
+
+        except:
+            print 'algum nao funcionou'
+            
+    def mirrorConnectGuide(self, limb):
+        if not self.guideMoveall:
+            self.doGuide()        
+        if not limb.guideMoveall:
+            limb.doGuide()
+
+        if pm.objExists(self.name+'MirrorGuide_grp'):
+            pm.delete (self.name+'MirrorGuide_grp')
+
+        self.mirrorGuide= pm.group (em=True, n=self.name+'MirrorGuide_grp') 
+        if not pm.objExists('GUIDES'):
+            pm.group ( self.name+'MirrorGuide_grp', n='GUIDES' )
+        else:
+            pm.parent ( self.name+'MirrorGuide_grp', 'GUIDES')
+                        
+               
+        self.guideMoveall.setParent (self.mirrorGuide)
+        self.mirrorGuide.scaleX.set (-1)
+        self.mirrorGuide.template.set (1)   
+        
+        limb.guideMoveall.translate >>  self.guideMoveall.translate
+        limb.guideMoveall.rotate >>  self.guideMoveall.rotate
+        limb.guideMoveall.scale >>  self.guideMoveall.scale
+        limb.startGuide.translate >>  self.startGuide.translate
+        limb.startGuide.rotate >>  self.startGuide.rotate
+        limb.startGuide.scale >>  self.startGuide.scale
+        limb.midGuide.translate >>  self.midGuide.translate
+        limb.midGuide.rotate >>  self.midGuide.rotate
+        limb.midGuide.scale >>  self.midGuide.scale
+        limb.endGuide.translate >>  self.endGuide.translate
+        limb.endGuide.rotate >>  self.endGuide.rotate
+        limb.endGuide.scale >>  self.endGuide.scale
+
+        if limb.flipAxis:
+            self.flipAxis=False
+        else:
+            self.flipAxis=True
+                      
     def doRig(self):
-        if not self.limbGuideMoveall:
+        if not self.guideMoveall:
             self.doGuide()
             
         #apagar todos os node ao reconstruir                      
@@ -96,8 +249,17 @@ class Limb():
             pm.delete (self.name+'Moveall')
             
         #Cria o grupo moveAll
-        self.limbMoveAll = pm.group(empty=True, n=self.name+'Moveall')
-        self.limbMoveAll.addAttr('ikfk', at='float',min=0, max=1,dv=1, k=1)
+        self.moveall = pm.group(empty=True, n=self.name+'Moveall')
+        pos =pm.xform (self.guideMoveall, q=True, ws=True, t=True)
+        pm.xform (self.moveall, ws=True, t=pos)
+        if not pm.objExists('MOVEALL'):
+            pm.group ( self.moveall, n='MOVEALL' )
+        else:
+            pm.parent (self.moveall, 'MOVEALL')
+
+        self.moveall.addAttr('ikfk', at='float',min=0, max=1,dv=1, k=1)
+        
+
         
         #define pontos do guide como vetores usando api para faciitar os calculos
         p1 = pm.xform (self.startGuide, q=True, t=True, ws=True)
@@ -108,8 +270,8 @@ class Limb():
         B= om.MVector(p2)
         C= om.MVector(p3)
         
-        if self.handJoint:
-            p4=pm.xform (self.handGuide, q=True, t=True, ws=True)
+        if self.lastJoint:
+            p4=pm.xform (self.lastGuide, q=True, t=True, ws=True)
             D=om.MVector(p4)
         
         #Calculando a normal do plano definido pelo guide
@@ -125,10 +287,13 @@ class Limb():
             
         n = BC^AB
         
+        self.jointLength=AB.length()+BC.length() 
+        
         m = orientMatrix (mvector=AB,normal=n,pos=A, axis=self.axis)            
         #cria joint1
         pm.select(cl=True)
-        self.startJnt = pm.joint()
+        jntName= self.limbDict['startJntSetup']['nameTempl']+self.jntSulfix
+        self.startJnt = pm.joint(n=jntName)
         pm.xform (self.startJnt, m = m, ws=True) 
         pm.makeIdentity (self.startJnt, apply=True, r=1, t=0, s=0, n=0, pn=0)
         
@@ -136,14 +301,16 @@ class Limb():
         #criando a matriz do joint conforme a orientacao setada
         m = orientMatrix (mvector=BC,normal=n,pos=B, axis=self.axis)  
         pm.select(cl=True)
-        self.midJnt= pm.joint()
+        jntName= self.limbDict['midJntSetup']['nameTempl']+self.jntSulfix
+        self.midJnt= pm.joint(n=jntName)
         pm.xform (self.midJnt, m = m, ws=True) 
         pm.makeIdentity (self.midJnt, apply=True, r=1, t=0, s=0, n=0, pn=0)
         
         #cria joint3
         #aqui so translada o joint, usa a mesma orientacao
         pm.select(cl=True)
-        self.endJnt=pm.joint()
+        jntName= self.limbDict['endJntSetup']['nameTempl']+self.jntSulfix
+        self.endJnt=pm.joint(n=jntName)
         pm.xform (self.endJnt, m = m, ws=True) 
         pm.xform (self.endJnt, t= C, ws=True)
         pm.makeIdentity (self.endJnt, apply=True, r=1, t=0, s=0, n=0, pn=0)
@@ -151,10 +318,10 @@ class Limb():
         #hierarquia
         pm.parent (self.midJnt, self.startJnt)
         pm.parent (self.endJnt, self.midJnt)
-        self.startJnt.setParent (self.limbMoveAll)
+        self.startJnt.setParent (self.moveall)
         
         ##joint4(hand) se estiver setado nas opcoes      
-        if self.handJoint:
+        if self.lastJoint:
             #joint4
             # Faz a orientacao do ultimo bone independente da normal do braco
             # Se o cotovelo estiver para frente inverte a normal
@@ -173,20 +340,22 @@ class Limb():
            
             m = orientMatrix (mvector=CD,normal=n,pos=C, axis=self.axis)              
             pm.select(cl=True)
-            self.handJnt= pm.joint()
-            pm.xform (self.handJnt, m = m, ws=True) 
-            pm.makeIdentity (self.handJnt, apply=True, r=1, t=0, s=0, n=0, pn=0) 
+            jntName= self.limbDict['lastJntSetup']['nameTempl']+self.jntSulfix
+            self.lastJnt= pm.joint(n=jntName)
+            pm.xform (self.lastJnt, m = m, ws=True) 
+            pm.makeIdentity (self.lastJnt, apply=True, r=1, t=0, s=0, n=0, pn=0) 
             
             #cria joint5 e so move
             pm.select(cl=True)
-            self.handTipJnt=pm.joint()
-            pm.xform (self.handTipJnt, m = m, ws=True) 
-            pm.xform (self.handTipJnt, t=D, ws=True)
-            pm.makeIdentity (self.handTipJnt, apply=True, r=1, t=0, s=0, n=0, pn=0)        
+            jntName= self.limbDict['lastJntSetup']['nameTempl']+self.tipJxtSulfix
+            self.lastTipJnt=pm.joint(n=jntName)
+            pm.xform (self.lastTipJnt, m = m, ws=True) 
+            pm.xform (self.lastTipJnt, t=D, ws=True)
+            pm.makeIdentity (self.lastTipJnt, apply=True, r=1, t=0, s=0, n=0, pn=0)        
             
             #hierarquia        
-            pm.parent (self.handJnt, self.endJnt)
-            pm.parent (self.handTipJnt, self.handJnt)            
+            pm.parent (self.lastJnt, self.endJnt)
+            pm.parent (self.lastTipJnt, self.lastJnt)            
                 
         ##Estrutura FK
         if self.axis=='Y'  or self.axis=='Z' or self.axis=='X':
@@ -248,7 +417,7 @@ class Limb():
         V=U/dist*dist
         T=A+V*CA.normal()
         D=B-T
-        Pole=(D.normal()*1.2)+B
+        Pole=(D.normal()*4)+B
         
         #test=pm.spaceLocator (p=(0,0,0)) # locator de teste de onde calculou o ponto mais proximo
         #pm.xform (test, t=T)
@@ -258,18 +427,18 @@ class Limb():
         pm.poleVectorConstraint (self.poleVec, ikH[0])
         pm.parent (self.midCntrl.getParent(), self.endCntrl)
         pm.parent (self.endCntrl.getParent(), self.moveAll1Cntrl)
-        pm.parent (self.moveAll1Cntrl.getParent(), self.poleVec.getParent(), self.ikCntrl.getParent(), self.limbMoveAll)
+        pm.parent (self.moveAll1Cntrl.getParent(), self.poleVec.getParent(), self.ikCntrl.getParent(), self.moveall)
 
         #handCntrls se houver
-        if self.handJoint:
+        if self.lastJoint:
             displaySetup=self.limbDict['startCntrlSetup']
             cntrlName=displaySetup['nameTempl']
-            self.startCntrl = cntrlCrv (name=cntrlName, obj=self.handJnt,**displaySetup)
+            self.startCntrl = cntrlCrv (name=cntrlName, obj=self.lastJnt,**displaySetup)
             buf=pm.group (em=True)
-            matrix=pm.xform (self.handJnt, q=True, ws=True, m=True)
+            matrix=pm.xform (self.lastJnt, q=True, ws=True, m=True)
             pm.xform (buf, m=matrix, ws=True)
             pm.parent (buf,self.ikCntrl)
-            handCnst = pm.orientConstraint (buf,self.startCntrl, self.handJnt, mo=False)
+            handCnst = pm.orientConstraint (buf,self.startCntrl, self.lastJnt, mo=False)
             pm.pointConstraint (self.endJnt,self.startCntrl.getParent(), mo=True)
             pm.parent (self.startCntrl.getParent(), self.midCntrl)
         
@@ -311,8 +480,8 @@ class Limb():
         self.poleVec.worldMatrix[0]  >> pinDist1.inMatrix2
         self.poleVec.worldMatrix[0]  >> pinDist2.inMatrix2
         
-        self.limbMoveAll.scaleX >> pinMultiScale1.input1
-        self.limbMoveAll.scaleX >> pinMultiScale2.input1
+        self.moveall.scaleX >> pinMultiScale1.input1
+        self.moveall.scaleX >> pinMultiScale2.input1
         
         pinMultiScale1.input2.set (AE.length())
         pinMultiScale2.input2.set (CE.length())
@@ -348,7 +517,7 @@ class Limb():
         startGrp.worldMatrix[0] >> stretchDist.inMatrix1
         endGrp.worldMatrix[0] >> stretchDist.inMatrix2
         
-        self.limbMoveAll.scaleX >> stretchMultiScale.input1
+        self.moveall.scaleX >> stretchMultiScale.input1
         stretchMultiScale.input2.set (distMax)
         stretchMultiScale.output >> stretchManualStretch1.input2
         stretchManualStretch1.output >> stretchNorm.input2X
@@ -407,7 +576,7 @@ class Limb():
         self.endCntrl.manualStretch >> ikfkBlend1.input[1]
         self.midCntrl.manualStretch >> ikfkBlend2.input[1]
        
-        self.limbMoveAll.ikfk >> ikfkReverse.inputX
+        self.moveall.ikfk >> ikfkReverse.inputX
         ikfkReverse.outputX >> ikfkBlend1.attributesBlender
         ikfkReverse.outputX >> ikfkBlend2.attributesBlender
         
@@ -415,12 +584,12 @@ class Limb():
         weightAttr = cnstrConn.target.connections(p=True, t='orientConstraint') ##Descobre o parametro de peso do constraint        
         ikfkReverse.outputX >> weightAttr[0]
         
-        if self.handJoint:
+        if self.lastJoint:
             handTargetAttrs = handCnst.target.connections(p=True, t='orientConstraint')
             ikfkReverse.outputX >> handTargetAttrs [1]
-            self.limbMoveAll.ikfk >> handTargetAttrs [0]
+            self.moveall.ikfk >> handTargetAttrs [0]
         
-        self.limbMoveAll.ikfk >> ikH[0].ikBlend      
+        self.moveall.ikfk >> ikH[0].ikBlend      
         ikfkBlend1.output >> self.startJnt.attr('scale'+axisName) 
         ikfkBlend2.output >> self.midJnt.attr('scale'+axisName)
         
@@ -428,12 +597,12 @@ class Limb():
         ##ikfk visibility
         ikCntrlVisCond = pm.createNode ('condition',n='ikVisCond')
         fkCntrlVisCond = pm.createNode ('condition',n='fkVisCond')
-        self.limbMoveAll.ikfk >> ikCntrlVisCond.ft
+        self.moveall.ikfk >> ikCntrlVisCond.ft
         ikCntrlVisCond.secondTerm.set (0)
         ikCntrlVisCond.operation.set (1)
         ikCntrlVisCond.colorIfTrueR.set (1)
         ikCntrlVisCond.colorIfFalseR.set (0)
-        self.limbMoveAll.ikfk >> fkCntrlVisCond.ft
+        self.moveall.ikfk >> fkCntrlVisCond.ft
         fkCntrlVisCond.secondTerm.set (1)
         fkCntrlVisCond.operation.set (1)
         fkCntrlVisCond.colorIfTrueR.set (1)
@@ -476,66 +645,89 @@ class Finger:
         self.folds=folds
         self.axis=axis
         self.flipAxis =flipAxis
-        self.fingerGuideMoveall=None
-        self.fingerMoveall=None
-        self.palmGuide=None
-        self.baseGuide=None
-        self.tipGuide=None
-        self.fold1Guide=None
-        self.fold2Guide=None
-        self.fingerGuideDict={'moveall':[0,0,0],'palm':[0,0,0],'base':[1,0,0],'tip':[2,0,0], 'fold1':[0,0.05,0],'fold2':[0,0,0]}
-        self.fingerGuideDict.update(kwargs) # atualiza com o q foi entrado
+        self.guideMoveall=None
+
+        ##IMPLEMENTAR padroes de nome 
+        self.guideSulfix='_guide'
+        self.jntSulfix='_jnt'
+        self.jxtSulfix='_jxt'
+        self.tipJxtSulfix='Tip_jxt'
+        grpSulfix='_grp'
         
         ##setaqens de aparencia dos controles
         self.fingerDict={'name':name,'folds':folds, 'axis':axis, 'flipAxis':flipAxis}
         self.fingerDict['moveallCntrlSetup']={'nameTempl':self.name+'MoveAll', 'icone':'circuloX','size':0.1,'color':(1,1,0) }    
         self.fingerDict['palmCntrlSetup']={'nameTempl':self.name+'palm', 'icone':'cubo','size':0.2,'color':(1,0,0) }    
-        self.fingerDict['baseCntrlSetup']={'nameTempl':self.name+'base', 'icone':'cubo','size':0.3,'color':(1,1,0) }    
-        self.fingerDict['tipCntrlSetup']={'nameTempl':self.name+'tip', 'icone':'circuloX','size':0.3,'color':(0,1,1) }    
+        if self.flipAxis:
+            self.fingerDict['baseCntrlSetup']={'nameTempl':self.name+'base', 'icone':'dropZ','size':0.1,'color':(1,1,0) } 
+        else:
+            self.fingerDict['baseCntrlSetup']={'nameTempl':self.name+'base', 'icone':'dropMenosZ','size':0.1,'color':(1,1,0) }    
+        #self.fingerDict['tipCntrlSetup']={'nameTempl':self.name+'tip', 'icone':'circuloX','size':0.3,'color':(0,1,1) }    
         self.fingerDict['fold1CntrlSetup']={'nameTempl':self.name+'fold1', 'icone':'circuloX','size':0.3,'color':(0,1,1) }    
         self.fingerDict['fold2CntrlSetup']={'nameTempl':self.name+'fold2', 'icone':'circuloX','size':0.3,'color':(0,1,1) }    
 
+        self.fingerDict['moveallGuideSetup']={'nameTempl':self.name+'MoveAll','size':0.1,'color':(1,1,0) }    
+        self.fingerDict['palmGuideSetup']={'nameTempl':self.name+'palm', 'size':0.2,'color':(1,0,0) }    
+        self.fingerDict['baseGuideSetup']={'nameTempl':self.name+'base', 'size':0.3,'color':(1,1,0) }    
+        self.fingerDict['tipGuideSetup']={'nameTempl':self.name+'tip', 'size':0.3,'color':(0,1,1) }    
+        self.fingerDict['fold1GuideSetup']={'nameTempl':self.name+'fold1', 'size':0.3,'color':(0,1,1) }    
+        self.fingerDict['fold2GuideSetup']={'nameTempl':self.name+'fold2', 'size':0.3,'color':(0,1,1) }    
+
+        self.fingerDict['palmJntSetup']={'nameTempl':self.name+'Palm', 'icone':'Bone','size':0.2}    
+        self.fingerDict['baseJntSetup']={'nameTempl':self.name+'Base', 'icone':'Bone','size':0.3}    
+        self.fingerDict['tipJntSetup']={'nameTempl':self.name, 'icone':'Bone','size':0.3}    
+        self.fingerDict['fold1JntSetup']={'nameTempl':self.name+'Fold1', 'icone':'Bone','size':0.3}    
+        self.fingerDict['fold2JntSetup']={'nameTempl':self.name+'Fold2', 'icone':'Bone','size':0.3}    
+        self.fingerDict['guideDict']={}
+        self.fingerGuideDict = {'moveall':[0,0,0],'palm':[0,0,0],'base':[1,0,0],'tip':[2,0,0], 'fold1':[0,0.05,0],'fold2':[0,0,0]}
+        self.fingerDict.update(kwargs) 
+        self.fingerGuideDict.update(self.fingerDict['guideDict']) 
+        self.fingerDict['guideDict']=self.fingerGuideDict.copy()
+        
     #guide 
     def doGuide(self, **kwargs):
-
+        self.fingerGuideDict = self.fingerDict['guideDict'].copy()
         self.fingerGuideDict.update(kwargs) # atualiza com o q foi entrado
-        
-        guideName= self.fingerDict['moveallCntrlSetup']['nameTempl']+'_guide'
-        
+                
         #se existir apaga
+        guideName= self.fingerDict['moveallGuideSetup']['nameTempl']+self.guideSulfix
         if pm.objExists (guideName):
-            pm.delete (guideName)
-        
-        #grupos    
-        self.fingerGuideMoveall = pm.group(n=guideName,em=True)
-        guideName=self.fingerDict['palmCntrlSetup']['nameTempl']+'_guide'
+            pm.delete (guideName)        
+        self.guideMoveall = pm.group(n=guideName,em=True)
+
+        if not pm.objExists('GUIDES'):
+            pm.group ( self.guideMoveall, n='GUIDES' )
+        else:
+            pm.parent ( self.guideMoveall, 'GUIDES')        
+
+        guideName=self.fingerDict['palmGuideSetup']['nameTempl']+self.guideSulfix
         self.palmGuide = pm.spaceLocator (n=guideName,p=(0,0,0))
         self.palmGuide.displayHandle.set(1)
         self.palmGuide.localScale.set(0.1,0.1,0.1) 
 
-        guideName=self.fingerDict['baseCntrlSetup']['nameTempl']+'_guide'
+        guideName=self.fingerDict['baseGuideSetup']['nameTempl']+self.guideSulfix
         self.baseGuide = pm.spaceLocator (n=guideName,p=(0,0,0))
         self.baseGuide.displayHandle.set(1)
         self.baseGuide.translate.set(1.3,0,0)
         self.baseGuide.localScale.set(0.1,0.1,0.1)
         
-        guideName=self.fingerDict['tipCntrlSetup']['nameTempl']+'_guide'
+        guideName=self.fingerDict['tipGuideSetup']['nameTempl']+self.guideSulfix
         self.tipGuide = pm.spaceLocator (n=guideName,p=(0,0,0))
         self.tipGuide.displayHandle.set(1)
         self.tipGuide.translate.set(1.7,0,0)
         self.tipGuide.localScale.set(0.1,0.1,0.1)
-        pm.parent (self.tipGuide, self.baseGuide,self.palmGuide, self.fingerGuideMoveall)
+        pm.parent (self.tipGuide, self.baseGuide,self.palmGuide, self.guideMoveall)
        
         #cria conforme o numero de dobras       
         if self.folds==2:
-            guideName=self.fingerDict['fold1CntrlSetup']['nameTempl']+'_guide'
+            guideName=self.fingerDict['fold1GuideSetup']['nameTempl']+self.guideSulfix
             self.fold1Guide = pm.spaceLocator (n=guideName,p=(0,0,0))
             self.fold1Guide.displayHandle.set(1)        
             fold1GuideGrp = pm.group(self.fold1Guide)
             fold1GuideGrp.translate.set(1.3,0,0)
             self.fold1Guide.localScale.set(0.1,0.1,0.1)
 
-            guideName=self.fingerDict['fold2CntrlSetup']['nameTempl']+'_guide'
+            guideName=self.fingerDict['fold2GuideSetup']['nameTempl']+self.guideSulfix
             self.fold2Guide = pm.spaceLocator (n=guideName,p=(0,0,0))  
             self.fold2Guide.displayHandle.set(1)       
             fold2GuideGrp = pm.group(self.fold2Guide)
@@ -552,10 +744,10 @@ class Finger:
             pm.setAttr (weightAttr[0],0.6)
             pm.setAttr (weightAttr[1],0.4)
             pm.pointConstraint(self.fold1Guide,self.tipGuide, fold2GuideGrp, mo=False)
-            pm.parent (fold1GuideGrp,fold2GuideGrp, self.fingerGuideMoveall)
+            pm.parent (fold1GuideGrp,fold2GuideGrp, self.guideMoveall)
             
         elif self.folds==1:
-            guideName=self.fingerDict['fold1CntrlSetup']['nameTempl']+'_guide'
+            guideName=self.fingerDict['fold1GuideSetup']['nameTempl']+self.guideSulfix
             self.fold1Guide = pm.spaceLocator (n=guideName,p=(0,0,0))        
             self.fold1Guide.displayHandle.set(1) 
             fold1GuideGrp = pm.group(self.fold1Guide)
@@ -567,10 +759,10 @@ class Finger:
             pm.aimConstraint(self.fold1Guide,self.tipGuide, weight=1, aimVector=(-1, 0 ,0) , upVector=(0, 1, 0),worldUpVector=(0,1,0), worldUpType='scene')
             cns=pm.pointConstraint(self.baseGuide, self.tipGuide , fold1GuideGrp, mo=False)
 
-            pm.parent (fold1GuideGrp, self.fingerGuideMoveall)
+            pm.parent (fold1GuideGrp, self.guideMoveall)
             
         elif self.folds==0:    
-            guideName=self.fingerDict['fold1CntrlSetup']['nameTempl']+'_guide'
+            guideName=self.fingerDict['fold1GuideSetup']['nameTempl']+self.guideSulfix
             self.fold1Guide = pm.spaceLocator (n=guideName,p=(0,0,0))        
             self.fold1Guide.displayHandle.set(1) 
             fold1GuideGrp = pm.group(self.fold1Guide)
@@ -582,28 +774,58 @@ class Finger:
             cns=pm.pointConstraint(self.baseGuide, self.tipGuide , fold1GuideGrp, mo=False)
             self.fold1Guide.translate.set(0,0.05,0)
             self.fold1Guide.visibility.set(0)
-            pm.parent (fold1GuideGrp, self.fingerGuideMoveall)
+            pm.parent (fold1GuideGrp, self.guideMoveall)
         
         #move para lugar definido nos parametros    
-        self.fingerGuideMoveall.translate.set( self.fingerGuideDict['moveall'])
+        self.guideMoveall.translate.set( self.fingerGuideDict['moveall'])
         self.palmGuide.translate.set( self.fingerGuideDict['palm'])
         self.baseGuide.translate.set( self.fingerGuideDict['base'])
         self.tipGuide.translate.set( self.fingerGuideDict['tip'])
         self.fold1Guide.translate.set( self.fingerGuideDict['fold1'])
         if self.folds==2:
             self.fold2Guide.translate.set( self.fingerGuideDict['fold2'])
-            
+
+
+    def getGuideFromScene(self):
+                
+        #se existir apaga
+        guideName= self.fingerDict['moveallGuideSetup']['nameTempl']+self.guideSulfix
+        self.guideMoveall = pm.PyNode (guideName)
+        
+        guideName=self.fingerDict['palmGuideSetup']['nameTempl']+self.guideSulfix
+        self.palmGuide = pm.PyNode (guideName)
+
+        guideName=self.fingerDict['baseGuideSetup']['nameTempl']+self.guideSulfix
+        self.baseGuide = pm.PyNode (guideName)
+        
+        guideName=self.fingerDict['tipGuideSetup']['nameTempl']+self.guideSulfix
+        self.tipGuide = pm.PyNode (guideName)
+      
+        guideName=self.fingerDict['fold1GuideSetup']['nameTempl']+self.guideSulfix
+        self.fold1Guide = pm.PyNode (guideName)
+
+        if self.folds==2:
+            guideName=self.fingerDict['fold2GuideSetup']['nameTempl']+self.guideSulfix
+            self.fold2Guide = pm.PyNode (guideName) 
+
 
 
     def doRig(self):
         # se nao existir guide, cria um default
-        if not pm.objExists (self.fingerDict['moveallCntrlSetup']['nameTempl']+'_guide'):
+        if not self.guideMoveall:
             self.doGuide()
             
         # se existir um modulo igual, apaga
         moveallName = self.fingerDict['moveallCntrlSetup']['nameTempl']
         if pm.objExists(moveallName):
             pm.delete(moveallName)
+
+        cntrlName = self.fingerDict['moveallCntrlSetup']['nameTempl']            
+        self.moveall = pm.group (name=cntrlName,em=True)
+
+
+        pos =pm.xform (self.guideMoveall, q=True, ws=True, t=True)
+        pm.xform (self.moveall, ws=True, t=pos)
  
         base=pm.xform (self.baseGuide, q=True,ws=True, t=True)
         tip=pm.xform (self.tipGuide, q=True,ws=True, t=True)
@@ -629,6 +851,7 @@ class Finger:
         if self.folds==2:
             fold2=pm.xform (self.fold2Guide, q=True,ws=True, t=True)
             guide=[palm,base,fold1,fold2,tip]
+            jntNames= [self.fingerDict['palmJntSetup']['nameTempl'],self.fingerDict['baseJntSetup']['nameTempl'],self.fingerDict['fold1JntSetup']['nameTempl'],self.fingerDict['fold2JntSetup']['nameTempl'], self.fingerDict['tipJntSetup']['nameTempl']]
         elif self.folds==1:
             guide=[palm,base,fold1,tip]
         elif self.folds==0:
@@ -646,13 +869,14 @@ class Finger:
                 AB=B-A  
                            
             m= orientMatrix(mvector=AB, normal=n, pos=A, axis=self.axis)
-            
-            j1 = pm.joint()
+            jntName=jntNames[i]+self.jntSulfix
+            j1 = pm.joint(n=jntName)
             fingerJnts.append(j1)
             pm.xform (j1, m = m, ws=True) 
             pm.makeIdentity (j1, apply=True, r=1, t=0, s=1, n=0, pn=0)
         
-        j1 = pm.joint()
+        jntName=self.fingerDict['tipJntSetup']['nameTempl']+self.tipJxtSulfix
+        j1 = pm.joint(n=jntName)
         fingerJnts.append(j1)
         pm.xform (j1, m = m, ws=True)
         pm.xform (j1, t =C, ws=True) 
@@ -662,11 +886,11 @@ class Finger:
         last=None
         displaySetup= self.fingerDict['palmCntrlSetup'].copy()
         cntrlName = displaySetup['nameTempl']                  
-        cntrl0= cntrlCrv(name=cntrlName, connType='orientConstraint',obj=fingerJnts[0], **displaySetup)    
+        cntrl0= cntrlCrv(name=cntrlName, connType='parentConstraint',obj=fingerJnts[0], **displaySetup)    
 
         displaySetup= self.fingerDict['baseCntrlSetup'].copy()
         cntrlName = displaySetup['nameTempl'] 
-        cntrl1 = cntrlCrv(name=cntrlName, connType='orientConstraint',obj=fingerJnts[1], **displaySetup )
+        cntrl1 = cntrlCrv(name=cntrlName, connType='parentConstraint',obj=fingerJnts[1], **displaySetup )
 
         pm.parent(cntrl1.getParent(),cntrl0)
         last=cntrl1
@@ -676,24 +900,21 @@ class Finger:
             cntrl1.addAttr('curl1',k=1,at=float,dv=0)
             displaySetup= self.fingerDict['fold1CntrlSetup'].copy()
             cntrlName = displaySetup['nameTempl']
-            cntrl2 = cntrlCrv(name=cntrlName,connType='orientConstraint', obj=fingerJnts[2],offsets=1, **displaySetup )
+            cntrl2 = cntrlCrv(name=cntrlName,connType='parentConstraint', obj=fingerJnts[2],offsets=1, **displaySetup )
             pm.parent (cntrl2.getParent(2),cntrl1)
             cntrl1.curl1 >> cntrl2.getParent().rotateY
         if self.folds > 1:
             cntrl1.addAttr('curl2',k=1,at=float,dv=0)
             displaySetup= self.fingerDict['fold2CntrlSetup'].copy()
             cntrlName = displaySetup['nameTempl']
-            cntrl3 = cntrlCrv(name=cntrlName,connType='orientConstraint', obj=fingerJnts[3],offsets=1, **displaySetup )
+            cntrl3 = cntrlCrv(name=cntrlName,connType='parentConstraint', obj=fingerJnts[3],offsets=1, **displaySetup )
             pm.parent (cntrl3.getParent(2),cntrl2)
             cntrl1.curl2 >> cntrl3.getParent().rotateY
 
 
-        cntrlName = self.fingerDict['moveallCntrlSetup']['nameTempl']            
-        fingerMoveall = pm.group (name=cntrlName,em=True)
-        pm.xform (fingerMoveall,t=palm,ws=True)
-        pm.parent (fingerJnts[0],cntrl0.getParent(),fingerMoveall)
+
+        pm.parent (fingerJnts[0],cntrl0.getParent(),self.moveall)
         
-        self.fingerMoveall=fingerMoveall
         
 
 
@@ -719,50 +940,132 @@ class Hand:
         self.flipAxis=flipAxis
         self.folds=folds
         self.fingerNum = fingerNum
-        self.handGuideMoveall=None
+        self.guideMoveall=None
+        
+        self.guideSulfix='_guide'
+        self.jntSulfix='_jnt'
+        self.jxtSulfix='_jxt'
+        self.tipJxtSulfix='Tip_jxt'
+        grpSulfix='_grp'
+        
         self.handDict={'name':name, 'axis':axis, 'flipAxis':flipAxis, 'folds':folds, 'fingerNum':fingerNum}
         self.handDict['fingers']={}
-        self.handDict['moveall']=[0,0,0]
+        self.handDict['guideDict']={'moveall':[0,0,0]}
+        self.handDict['fingerNames']=['Pink','Ring','Middle','Index','Thumb']
         for i in range(fingerNum):
-            fingerName='dedo'+str(i)#IMPLEMENTAR nomes dos dedos            
+            fingerName=self.name+self.handDict['fingerNames'][i]#IMPLEMENTAR nomes dos dedos            
             self.handDict['fingers']['finger'+str(i+1)] = {'name':fingerName,
                                                 'fingerGuideDict':{'moveall':[0,0,(((fingerNum/2)*-.3)+(i*.3))],'palm':[0,0,0],'base':[1,0,0],'tip':[2,0,0], 'fold1':[0,0.05,0],'fold2':[0,0,0]},
                                                 'instance':None
                                                 }
         self.handDict.update(kwargs)
         
-        for finger in self.handDict['fingers']:                                                       
+        for finger in self.handDict['fingers']: 
+            print finger                                                      
             f=Finger(name=self.handDict['fingers'][finger]['name'],axis=self.axis,flipAxis=self.flipAxis,folds=self.folds)                                 
-            self.handDict['fingers'][finger]['instance']=f
+            self.handDict['fingers'][finger]['instance'] = f
             
     def doGuide(self, **kwargs):
         #IMPLEMENTAR update do handDict - talvez handGuideDict
-         
-        if pm.objExists (self.name+'Moveall_guide'):
+        self.handGuideDict = self.handDict['guideDict'].copy()
+        self.handGuideDict.update(kwargs)
+        if pm.objExists(self.name+'Moveall_guide'):
             pm.delete (self.name+'Moveall_guide')
-    
-        self.handGuideMoveall = pm.group(n=self.name+'Moveall_guide',em=True)
-        pm.xform (self.handGuideMoveall, ws=True, t=self.handDict['moveall'])
+
+        self.guideMoveall = pm.group(n=self.name+'Moveall_guide',em=True)
+        if not pm.objExists('GUIDES'):
+            pm.group ( self.guideMoveall, n='GUIDES' )
+        else:
+            pm.parent ( self.guideMoveall, 'GUIDES')              
+
+
         for finger in self.handDict['fingers']:                                                                                  
             f = self.handDict['fingers'][finger]['instance']
-            dict=self.handDict['fingers'][finger]['fingerGuideDict']
+            dict = self.handDict['fingers'][finger]['fingerGuideDict']
             f.doGuide(**dict)
-            pm.parent (f.fingerGuideMoveall,self.handGuideMoveall)
+            pm.parent (f.guideMoveall,self.guideMoveall)
+
+        pm.xform (self.guideMoveall, ws=True, t=self.handGuideDict['moveall'])
+
+    def getGuideFromScene(self): 
+        guideName=self.name+'Moveall_guide'           
+        self.guideMoveall = pm.PyNode(guideName)
+        for finger in self.handDict['fingers']:                                                                                  
+            self.handDict['fingers'][finger]['instance'].getGuideFromScene()
+
+        
+    def mirrorConnectGuide(self, hand):
+        if not self.guideMoveall:
+            self.doGuide()        
+        if not hand.guideMoveall:
+            hand.doGuide()
+
+        self.mirrorGuide= pm.group (em=True, n=self.name+'MirrorGuide_grp') 
+        if not pm.objExists('GUIDES'):
+            pm.group ( self.name+'MirrorGuide_grp', n='GUIDES' )
+        else:
+            pm.parent ( self.name+'MirrorGuide_grp', 'GUIDES')
+                    
+        self.guideMoveall.setParent (self.mirrorGuide)
+        self.mirrorGuide.scaleX.set (-1)
+        self.mirrorGuide.template.set (1)   
+        
+        hand.guideMoveall.translate >>  self.guideMoveall.translate
+        hand.guideMoveall.rotate >>  self.guideMoveall.rotate
+        hand.guideMoveall.scale >>  self.guideMoveall.scale
+        
+        for a, b in zip(self.handDict['fingers'], hand.handDict['fingers']):
+            f_mirror = self.handDict['fingers'][a]['instance']   
+            f_origin = hand.handDict['fingers'][b]['instance']  
+
+            f_origin.guideMoveall.translate >> f_mirror.guideMoveall.translate
+            f_origin.guideMoveall.rotate >> f_mirror.guideMoveall.rotate
+            f_origin.guideMoveall.scale >> f_mirror.guideMoveall.scale
+            f_origin.palmGuide.translate >> f_mirror.palmGuide.translate
+            f_origin.palmGuide.rotate >> f_mirror.palmGuide.rotate
+            f_origin.palmGuide.scale >> f_mirror.palmGuide.scale
+            f_origin.baseGuide.translate >> f_mirror.baseGuide.translate
+            f_origin.baseGuide.rotate >> f_mirror.baseGuide.rotate
+            f_origin.baseGuide.scale >> f_mirror.baseGuide.scale
+            f_origin.tipGuide.translate >> f_mirror.tipGuide.translate
+            f_origin.tipGuide.rotate >> f_mirror.tipGuide.rotate
+            f_origin.tipGuide.scale >> f_mirror.tipGuide.scale
+            f_origin.fold1Guide.translate >> f_mirror.fold1Guide.translate
+            f_origin.fold1Guide.rotate >> f_mirror.fold1Guide.rotate
+            f_origin.fold1Guide.scale >> f_mirror.fold1Guide.scale
+            if self.folds==2:
+                f_origin.fold2Guide.translate >> f_mirror.fold2Guide.translate
+                f_origin.fold2Guide.rotate >> f_mirror.fold2Guide.rotate
+                f_origin.fold2Guide.scale >> f_mirror.fold2Guide.scale  
+                                                      
+        if hand.flipAxis:
+            self.flipAxis=False
+        else:
+            self.flipAxis=True
+
 
     def doRig(self, **kwargs):
-        if not self.handGuideMoveall:
+        if not self.guideMoveall:
             self.doGuide()
 
         if pm.objExists (self.name+'Moveall'):
             pm.delete (self.name+'Moveall')
         
-        self.handMoveall =pm.group(n=self.name+'Moveall',em=True)
-        pm.xform (self.handMoveall, ws=True, t=self.handDict['moveall'])
+        self.moveall =pm.group(n=self.name+'Moveall',em=True)
+        pos =pm.xform (self.guideMoveall, q=True, ws=True, t=True)
+        pm.xform (self.moveall, ws=True, t=pos)
+        
+        if not pm.objExists('MOVEALL'):
+            pm.group ( self.moveall, n='MOVEALL' )
+        else:
+            pm.parent (self.moveall, 'MOVEALL')
+        
         for finger in self.handDict['fingers']:                                                                                  
             f = self.handDict['fingers'][finger]['instance']
+            f.flipAxis = self.flipAxis
             dict=self.handDict['fingers'][finger]['fingerGuideDict']
             f.doRig()
-            pm.parent (f.fingerMoveall, self.handMoveall)
+            pm.parent (f.moveall, self.moveall)
 
         #IMPLEMENTAR atualizar o guideDict
         
@@ -784,89 +1087,217 @@ class Foot:
         self.name=name
         self.flipAxis=flipAxis
         self.axis=axis
-        self.footGuideDict={'moveall':[0,0,0],'center':[0,0,0],'tip':[3,0,0],'heel':[-1,0,0],'ankle':[0,1,0],'ball':[2,0.5,0],'in':[2,0,-1],'out':[2,0,1]}
-        self.footGuideMoveall=None
+        
+        self.guideMoveall=None
+        
+        self.guideSulfix='_guide'
+        self.jntSulfix='_jnt'
+        self.jxtSulfix='_jxt'
+        self.tipJxtSulfix='Tip_jxt'
+        self.grpSulfix='_grp'
         
         #definicoes da aparencia dos controles
         self.footDict={'name':name, 'axis':axis, 'flipAxis':flipAxis}
         self.footDict['moveallCntrlSetup']={'nameTempl':self.name+'MoveAll', 'icone':'circuloX','size':1.8,'color':(1,1,0) }    
-        self.footDict['centerCntrlSetup'] = {'nameTempl':self.name+'Center', 'icone':'circuloX','size':2,'color':(1,1,0) }    
+        self.footDict['centerCntrlSetup'] = {'nameTempl':self.name+'Center', 'icone':'circuloX','size':2,'color':(0,0,1) }    
         self.footDict['tipCntrlSetup'] = {'nameTempl':self.name+'Tip', 'icone':'bola','size':0.5,'color':(0,1,1)}
         self.footDict['heelCntrlSetup'] = {'nameTempl':self.name+'Heel', 'icone':'bola', 'size':0.5, 'color':(0,1,1) }
         self.footDict['ankleCntrlSetup'] = {'nameTempl':self.name+'Ankle', 'icone':'cubo', 'size':1, 'color':(0,1,1) }
         self.footDict['ballCntrlSetup'] = {'nameTempl':self.name+'Ball', 'icone':'circuloX', 'size':1.5, 'color':(1,1,0) }
         self.footDict['inCntrlSetup'] = {'nameTempl':self.name+'In', 'icone':'bola', 'size':0.4, 'color':(0,1,1)}
         self.footDict['outCntrlSetup'] = {'nameTempl':self.name+'Out', 'icone':'bola', 'size':0.4, 'color':(0,1,1)}
-        self.footDict['rollCntrlSetup'] = {'nameTempl':self.name+'Roll', 'icone':'cubo', 'size':0.4, 'color':(0,0,1)}
-        self.footDict['baseCntrlSetup'] = {'nameTempl':self.name+'Base', 'icone':'circuloY', 'size':3, 'color':(0,1,0)}
+        self.footDict['rollCntrlSetup'] = {'nameTempl':self.name+'Roll', 'icone':'cubo', 'size':0.4, 'color':(0,.6,1)}
+        self.footDict['baseCntrlSetup'] = {'nameTempl':self.name+'Base', 'icone':'quadradoY', 'size':3, 'color':(0,0,1)}
         self.footDict['slideCntrlSetup'] = {'nameTempl':self.name+'Slide', 'icone':'bola', 'size':0.4, 'color':(1,0,0)}
-        self.footDict['jointCntrlSetup'] = {'nameTempl':self.name+'Joint', 'icone':'bola', 'size':0.5, 'color':(1,1,0)}
+        self.footDict['toLimbCntrlSetup'] = {'nameTempl':self.name+'ToLimb', 'icone':'bola', 'size':0.5, 'color':(1,1,0)}
         self.footDict['toeCntrlSetup'] = {'nameTempl':self.name+'Toe', 'icone':'circuloX', 'size':1.0, 'color':(1,1,0)}
-        self.footDict['joint1FkCntrlSetup'] = {'nameTempl':self.name+'Joint1Fk', 'icone':'cubo', 'size':1.0, 'color':(0,1,0)}
-        self.footDict['joint2FkCntrlSetup'] = {'nameTempl':self.name+'Joint2Fk', 'icone':'cubo', 'size':1.0, 'color':(0,1,0)}
-         
-                
+
+        self.footDict['ankleFkCntrlSetup'] = {'nameTempl':self.name+'TnkleFk', 'icone':'cubo', 'size':1.0, 'color':(0,1,0)}
+        self.footDict['toeFkCntrlSetup'] = {'nameTempl':self.name+'ToeFk', 'icone':'cubo', 'size':1.0, 'color':(0,1,0)}
+
+        self.footDict['moveallGuideSetup']={'nameTempl':self.name+'MoveAll', 'size':1.8,'color':(1,1,0) }    
+        self.footDict['centerGuideSetup'] = {'nameTempl':self.name+'Center', 'size':2,'color':(1,1,0) }    
+        self.footDict['tipGuideSetup'] = {'nameTempl':self.name+'Tip', 'size':0.5,'color':(0,1,1)}
+        self.footDict['heelGuideSetup'] = {'nameTempl':self.name+'Heel','size':0.5, 'color':(0,1,1) }
+        self.footDict['ankleGuideSetup'] = {'nameTempl':self.name+'Ankle', 'size':1, 'color':(0,1,1) }
+        self.footDict['ballGuideSetup'] = {'nameTempl':self.name+'Ball',  'size':1.5, 'color':(1,1,0) }
+        self.footDict['inGuideSetup'] = {'nameTempl':self.name+'In', 'size':0.4, 'color':(0,1,1)}
+        self.footDict['outGuideSetup'] = {'nameTempl':self.name+'Out',  'size':0.4, 'color':(0,1,1)}
+        self.footDict['rollGuideSetup'] = {'nameTempl':self.name+'Roll', 'size':0.4, 'color':(0,0,1)}
+        self.footDict['baseGuideSetup'] = {'nameTempl':self.name+'Base', 'size':3, 'color':(0,1,0)}
+        self.footDict['slideGuideSetup'] = {'nameTempl':self.name+'Slide', 'size':0.4, 'color':(1,0,0)}
+        self.footDict['jointGuideSetup'] = {'nameTempl':self.name+'Joint', 'size':0.5, 'color':(1,1,0)}
+        self.footDict['toeGuideSetup'] = {'nameTempl':self.name+'Toe', 'size':1.0, 'color':(1,1,0)}
+    
+        self.footDict['ankleJntSetup'] = {'nameTempl':self.name+'Ankle', 'icone':'Bone', 'size':1.0}
+        self.footDict['toeJntSetup'] = {'nameTempl':self.name+'Toe', 'icone':'Bone', 'size':1.0}
+        self.footDict['guideDict'] = {}
+        self.footGuideDict = {'moveall':[0,0,0],'center':[0,0,0],'tip':[3,0,0],'heel':[-1,0,0],'ankle':[0,1,0],'ball':[2,0.5,0],'in':[2,0,-1],'out':[2,0,1]}
+        self.footDict.update(kwargs) 
+        self.footGuideDict.update(self.footDict['guideDict']) 
+        self.footDict['guideDict']=self.footGuideDict.copy()
+                       
     def doGuide(self,**kwargs):
         #atualiza o footGuideDict com o q for entrado aqui nesse metodo
         #ex: doGuide (center=[0,0,0], tip=[10,10,0]
-         
+        self.footGuideDict= self.footDict['guideDict'].copy() 
         self.footGuideDict.update(kwargs)
                 
-        guideName=self.footDict['moveallCntrlSetup']['nameTempl']+'_guide' 
+        guideName=self.footDict['moveallGuideSetup']['nameTempl']+'_guide' 
         # deleta se existir
         if pm.objExists(guideName):
             pm.delete (guideName)
           
-        self.footGuideMoveall=pm.group (n=guideName ,em=True)
-        
+        self.guideMoveall=pm.group (n=guideName ,em=True)
+        if not pm.objExists('GUIDES'):
+            pm.group ( self.guideMoveall, n='GUIDES' )
+        else:
+            pm.parent ( self.guideMoveall, 'GUIDES')
         #cria guides segundo os nomes dos controles e nas posicoes definidas no dicionario footGuideDict 
-        guideName=self.footDict['centerCntrlSetup']['nameTempl']+'_guide'
+
+        guideName=self.footDict['centerGuideSetup']['nameTempl']+self.guideSulfix
         self.centerGuide=pm.spaceLocator (n=guideName, p=(0,0,0))
         self.centerGuide.localScale.set(.2,.2,.2)
         self.centerGuide.displayHandle.set(1)
         
-        guideName=self.footDict['tipCntrlSetup']['nameTempl']+'_guide'
+        guideName=self.footDict['centerGuideSetup']['nameTempl']+self.grpSulfix
+        self.centerGuideGrp=pm.group(self.centerGuide, n=guideName)
+        
+        guideName=self.footDict['tipGuideSetup']['nameTempl']+self.guideSulfix
         self.tipGuide=pm.spaceLocator (n=guideName,p=(0,0,0))
         self.tipGuide.translate.set(self.footGuideDict['tip'])
         self.tipGuide.localScale.set(.2,.2,.2)
         self.tipGuide.displayHandle.set(1)
                 
-        guideName=self.footDict['heelCntrlSetup']['nameTempl']+'_guide'
+        guideName=self.footDict['heelGuideSetup']['nameTempl']+self.guideSulfix
         self.heelGuide=pm.spaceLocator (n=guideName,p=(0,0,0))
         self.heelGuide.translate.set(self.footGuideDict['heel'])
         self.heelGuide.localScale.set(.2,.2,.2)
         self.heelGuide.displayHandle.set(1)
         
-        guideName=self.footDict['ankleCntrlSetup']['nameTempl']+'_guide'
+        guideName=self.footDict['ankleGuideSetup']['nameTempl']+self.guideSulfix
         self.ankleGuide=pm.spaceLocator (n=guideName,p=(0,0,0))
         self.ankleGuide.translate.set(self.footGuideDict['ankle'])
         self.ankleGuide.localScale.set(.2,.2,.2)
         self.ankleGuide.displayHandle.set(1)
         
-        guideName=self.footDict['ballCntrlSetup']['nameTempl']+'_guide'
+        guideName=self.footDict['ballGuideSetup']['nameTempl']+self.guideSulfix
         self.ballGuide=pm.spaceLocator (n=guideName,p=(0,0,0))
         self.ballGuide.translate.set(self.footGuideDict['ball'])
         self.ballGuide.localScale.set(.2,.2,.2)
         self.ballGuide.displayHandle.set(1)
         
-        guideName=self.footDict['inCntrlSetup']['nameTempl']+'_guide'
+        guideName=self.footDict['inGuideSetup']['nameTempl']+self.guideSulfix
         self.inGuide=pm.spaceLocator (n=guideName,p=(0,0,0))
         self.inGuide.translate.set(self.footGuideDict['in'])
         self.inGuide.localScale.set(.2,.2,.2)
         self.inGuide.displayHandle.set(1)
         
-        guideName=self.footDict['outCntrlSetup']['nameTempl']+'_guide'
+        guideName=self.footDict['outGuideSetup']['nameTempl']+self.guideSulfix
         self.outGuide=pm.spaceLocator (n=guideName,p=(0,0,0))
         self.outGuide.translate.set(self.footGuideDict['out'])
         self.outGuide.localScale.set(.2,.2,.2)
         self.outGuide.displayHandle.set(1)
         
-        pm.parent (self.centerGuide,self.tipGuide,self.heelGuide,self.ankleGuide,self.ballGuide,self.inGuide,self.outGuide, self.footGuideMoveall)
+        pm.pointConstraint (self.tipGuide,self.heelGuide, self.centerGuideGrp)
+        pm.pointConstraint (self.tipGuide, self.centerGuideGrp, e=True, w=0.25)
+        pm.pointConstraint (self.heelGuide, self.centerGuideGrp, e=True, w=0.75)
+
+        pm.aimConstraint(self.heelGuide,self.tipGuide, weight=1, aimVector=(-1, 0 ,0) , upVector=(0, 1, 0),worldUpVector=(0,1,0), worldUpType='scene')              
+        pm.aimConstraint(self.tipGuide,self.centerGuide, weight=1, aimVector=(1, 0 ,0) , upVector=(0, 1, 0),worldUpVector=(0,1,0), worldUpType='scene')              
         
-        self.footGuideMoveall.translate.set(self.footGuideDict['moveall'])
+        pm.parent (self.ballGuide, self.inGuide,self.outGuide, self.tipGuide)
+        self.ankleGuide.setParent (self.centerGuide)
+
+        pm.parent (self.centerGuideGrp , self.tipGuide,self.heelGuide, self.guideMoveall)
+        
+        self.guideMoveall.translate.set(self.footGuideDict['moveall'])
+
+    def getGuideFromScene(self):               
+        guideName=self.footDict['moveallGuideSetup']['nameTempl']+'_guide'           
+        self.guideMoveall=pm.PyNode(guideName)
+        
+        guideName=self.footDict['centerGuideSetup']['nameTempl']+self.guideSulfix
+        self.centerGuide=pm.PyNode(guideName)
+       
+        guideName=self.footDict['centerGuideSetup']['nameTempl']+self.grpSulfix
+        self.centerGuideGrp=pm.PyNode(guideName)
+        
+        guideName=self.footDict['tipGuideSetup']['nameTempl']+self.guideSulfix
+        self.tipGuide=pm.PyNode(guideName)
                 
+        guideName=self.footDict['heelGuideSetup']['nameTempl']+self.guideSulfix
+        self.heelGuide=pm.PyNode(guideName)
+       
+        guideName=self.footDict['ankleGuideSetup']['nameTempl']+self.guideSulfix
+        self.ankleGuide=pm.PyNode(guideName)
+
+        guideName=self.footDict['ballGuideSetup']['nameTempl']+self.guideSulfix
+        self.ballGuide=pm.PyNode(guideName)
+       
+        guideName=self.footDict['inGuideSetup']['nameTempl']+self.guideSulfix
+        self.inGuide=pm.PyNode(guideName)
+        
+        guideName=self.footDict['outGuideSetup']['nameTempl']+self.guideSulfix
+        self.outGuide=pm.PyNode(guideName)
+        
+
+    def mirrorConnectGuide(self,foot):
+        if not self.guideMoveall:
+            self.doGuide()
+        if not foot.guideMoveall:
+            foot.doGuide()
+
+        self.mirrorGuide= pm.group (em=True, n=self.name+'MirrorGuide_grp') 
+        if not pm.objExists('GUIDES'):
+            pm.group ( self.name+'MirrorGuide_grp', n='GUIDES' )
+        else:
+            pm.parent ( self.name+'MirrorGuide_grp', 'GUIDES')
+                  
+        self.guideMoveall.setParent (self.mirrorGuide)
+        self.mirrorGuide.scaleX.set (-1)
+        self.mirrorGuide.template.set (1)   
+        
+        foot.guideMoveall.translate >>  self.guideMoveall.translate
+        foot.guideMoveall.rotate >>  self.guideMoveall.rotate
+        foot.guideMoveall.scale >>  self.guideMoveall.scale
+
+        foot.centerGuide.translate >>  self.centerGuide.translate
+        foot.centerGuide.rotate >>  self.centerGuide.rotate
+        foot.centerGuide.scale >>  self.centerGuide.scale
+
+        foot.tipGuide.translate >>  self.tipGuide.translate
+        foot.tipGuide.rotate >>  self.tipGuide.rotate
+        foot.tipGuide.scale >>  self.tipGuide.scale
+
+        foot.heelGuide.translate >>  self.heelGuide.translate
+        foot.heelGuide.rotate >>  self.heelGuide.rotate
+        foot.heelGuide.scale >>  self.heelGuide.scale
+
+        foot.ankleGuide.translate >>  self.ankleGuide.translate
+        foot.ankleGuide.rotate >>  self.ankleGuide.rotate
+        foot.ankleGuide.scale >>  self.ankleGuide.scale
+
+        foot.ballGuide.translate >>  self.ballGuide.translate
+        foot.ballGuide.rotate >>  self.ballGuide.rotate
+        foot.ballGuide.scale >>  self.ballGuide.scale
+
+        foot.inGuide.translate >>  self.inGuide.translate
+        foot.inGuide.rotate >>  self.inGuide.rotate
+        foot.inGuide.scale >>  self.inGuide.scale
+
+        foot.outGuide.translate >>  self.outGuide.translate
+        foot.outGuide.rotate >>  self.outGuide.rotate
+        foot.outGuide.scale >>  self.outGuide.scale
+
+        if foot.flipAxis:
+            self.flipAxis=False
+        else:
+            self.flipAxis=True
+        
+                       
     def doRig(self):
-        if not self.footGuideMoveall:
+        if not self.guideMoveall:
             self.doGuide()
 
         cntrlName=self.footDict['moveallCntrlSetup']['nameTempl']
@@ -903,17 +1334,20 @@ class Foot:
 
         pm.select(cl=True)               
         m= orientMatrix(mvector=AD, normal=n, pos=A, axis=self.axis)
-        j1 = pm.joint()
+        jntName=self.footDict['ankleJntSetup']['nameTempl']+self.jntSulfix
+        j1 = pm.joint(n=jntName)
         pm.xform (j1, m = m, ws=True) 
         pm.makeIdentity (j1, apply=True, r=1, t=0, s=1, n=0, pn=0)
                 
         #cria os joints     
         m= orientMatrix(mvector=CD, normal=n, pos=D, axis=self.axis)
-        j2 = pm.joint()
+        jntName=self.footDict['toeJntSetup']['nameTempl']+self.jntSulfix
+        j2 = pm.joint(n=jntName)
         pm.xform (j2, m = m, ws=True) 
         pm.makeIdentity (j2, apply=True, r=1, t=0, s=1, n=0, pn=0)
         
-        j3 = pm.joint()
+        jntName=self.footDict['toeJntSetup']['nameTempl']+self.tipJxtSulfix
+        j3 = pm.joint(n=jntName)
         pm.xform (j3, m = m, ws=True)
         pm.xform (j3, t =C, ws=True) 
         pm.makeIdentity (j3, apply=True, r=1, t=0, s=1, n=0, pn=0)
@@ -921,11 +1355,16 @@ class Foot:
         ballIkh = pm.ikHandle (sj=j1, ee=j2, sol="ikRPsolver")
         tipIkh = pm.ikHandle (sj=j2, ee=j3, sol="ikRPsolver")
         
-        footMoveall=pm.group (em=True,n=cntrlName)
-        footMoveall.translate.set(center)
+        self.moveall=pm.group (em=True,n=cntrlName)
+        self.moveall.translate.set(center)
+        if not pm.objExists('MOVEALL'):
+            pm.group ( self.moveall, n='MOVEALL' )
+        else:
+            pm.parent (self.moveall, 'MOVEALL')
+
         
         #esse controle deve levar o controle ik da ponta do limb para funcionar o pe 
-        displaySetup= self.footDict['jointCntrlSetup'].copy()
+        displaySetup= self.footDict['toLimbCntrlSetup'].copy()
         cntrlName = displaySetup['nameTempl']
         self.limbConnectionCntrl=cntrlCrv(name=cntrlName,obj=j1,connType='parentConstraint', **displaySetup)
 
@@ -933,7 +1372,10 @@ class Foot:
         displaySetup= self.footDict['baseCntrlSetup'].copy()
         cntrlName = displaySetup['nameTempl']        
         baseCntrl=cntrlCrv(name=cntrlName,obj=self.centerGuide, **displaySetup)
+        pm.move (.8,0,0, baseCntrl, r=True, os=True)
         pm.xform (baseCntrl, rp=ankle, ws=True)
+        pm.scale (baseCntrl, [1,1,.5], r=True)
+        pm.makeIdentity (baseCntrl, apply=True, r=0, t=1, s=1, n=0, pn=0)
         baseCntrl.addAttr ('extraRollCntrls',min=0, max=1, dv=0, k=1)
         
         #slidePivot
@@ -982,7 +1424,7 @@ class Foot:
         displaySetup= self.footDict['rollCntrlSetup'].copy()
         cntrlName = displaySetup['nameTempl']
         rollCntrl=cntrlCrv(name=cntrlName,obj=self.ballGuide, **displaySetup)
-        rollCntrl.getParent().translateBy((0,2,0))
+        rollCntrl.getParent().translateBy((0,1.5,1))
         
         #hierarquia
         pm.parent (ballCntrl.getParent(), toeCntrl.getParent(), heelCntrl)
@@ -993,9 +1435,11 @@ class Foot:
         rollCntrl.getParent().setParent(slideCompensateGrp)
         slideCntrl.getParent().setParent(baseCntrl)
         ballIkh[0].setParent (ballCntrl)
+        ballIkh[0].visibility.set(0)
         tipIkh[0].setParent (toeCntrl)
+        tipIkh[0].visibility.set(0)
         self.limbConnectionCntrl.getParent().setParent (ballCntrl)
-        pm.parent (j1,baseCntrl.getParent(),footMoveall)
+        pm.parent (j1,baseCntrl.getParent(),self.moveall)
         
         #rollCntrl
         rollCntrl.addAttr ('heelLimit',dv=50,k=1,at='float')
@@ -1039,28 +1483,28 @@ class Foot:
         animUA.output >> inCntrl.getParent().rotateX
 
         #controles fk
-        displaySetup= self.footDict['joint1FkCntrlSetup'].copy()
+        displaySetup= self.footDict['ankleFkCntrlSetup'].copy()
         cntrlName = displaySetup['nameTempl']
         joint1FkCntrl=cntrlCrv(name=cntrlName,obj=j1,connType='parentConstraint', **displaySetup)
 
-        displaySetup= self.footDict['joint2FkCntrlSetup'].copy()
+        displaySetup= self.footDict['toeFkCntrlSetup'].copy()
         cntrlName = displaySetup['nameTempl']
         joint2FkCntrl=cntrlCrv(name=cntrlName,obj=j2,connType='orientConstraint', **displaySetup)
         
         joint2FkCntrl.getParent().setParent(joint1FkCntrl)
-        joint1FkCntrl.getParent().setParent(footMoveall) 
+        joint1FkCntrl.getParent().setParent(self.moveall) 
         
         #node tree ikfk Blend
-        footMoveall.addAttr ('ikfk',at='float', min=0, max=1,dv=1,k=1)
+        self.moveall.addAttr ('ikfk',at='float', min=0, max=1,dv=1,k=1)
         ikfkRev=pm.createNode('reverse')
         ikfkVisCond1=pm.createNode('condition')
         ikfkVisCond2=pm.createNode('condition')
         
         #visibilidade ik fk
-        footMoveall.ikfk >> ikfkRev.inputX
-        footMoveall.ikfk >> ballIkh[0].ikBlend  
-        footMoveall.ikfk >> tipIkh[0].ikBlend 
-        footMoveall.ikfk >> ikfkVisCond1.firstTerm        
+        self.moveall.ikfk >> ikfkRev.inputX
+        self.moveall.ikfk >> ballIkh[0].ikBlend  
+        self.moveall.ikfk >> tipIkh[0].ikBlend 
+        self.moveall.ikfk >> ikfkVisCond1.firstTerm        
         ikfkVisCond1.secondTerm.set (0)
         ikfkVisCond1.operation.set (2)
         ikfkVisCond1.colorIfTrueR.set (1)
@@ -1068,7 +1512,7 @@ class Foot:
         ikfkVisCond1.outColorR >> baseCntrl.getParent().visibility
         
         #blend dos constraints 
-        footMoveall.ikfk >> ikfkVisCond2.firstTerm
+        self.moveall.ikfk >> ikfkVisCond2.firstTerm
         ikfkVisCond2.secondTerm.set (1)
         ikfkVisCond2.operation.set (4)
         ikfkVisCond2.colorIfTrueR.set (1)
@@ -1076,7 +1520,7 @@ class Foot:
         ikfkVisCond2.outColorR >> joint1FkCntrl.getParent().visibility
         parCnstr = j1.connections (type='parentConstraint')[0] #descobre constraint
         weightAttr = parCnstr.target.connections(p=True, t='parentConstraint') #descobre parametros
-        footMoveall.ikfk >> weightAttr[0]
+        self.moveall.ikfk >> weightAttr[0]
         ikfkRev.outputX >> weightAttr[1]
             
         #IMPLEMENTAR guardar a posicao dos guides
@@ -1097,73 +1541,135 @@ class Spine:
         # um so hip para ik e fk?
              
     def __init__(self, name='spine',flipAxis=False,axis='X',**kwargs):
-        self.startGuide = None
-        self.midGuide = None
-        self.endGuide = None
-        self.endTipGuide=None
-        self.startTipGuide=None
         
-        self.spineGuideDict={'moveall':[0,0,0],'start':[0,0,0],'mid':[0,4,0],'end':[0,8,0], 'startTip':[0,-2,0],'endTip':[0,11,0]}
+        
         self.name=name
         self.flipAxis=flipAxis
         self.axis=axis
-        self.spineGuideMoveall=None
+        self.guideMoveall=None
+        
+        self.guideSulfix='_guide'
+        self.jntSulfix='_jnt'
+        self.jxtSulfix='_jxt'
+        self.tipJxtSulfix='Tip_jxt'
+        self.zeroJxtSulfix='Zero_jxt'
+        grpSulfix='_grp'
         
         #dicionario q determina a aparencia dos controles
         self.spineDict={'name':name, 'axis':axis, 'flipAxis':flipAxis}
-        self.spineDict['moveallSetup']={'nameTempl':self.name+'MoveAll', 'icone':'circuloX','size':1.8,'color':(1,1,0) }    
-        self.spineDict['hipCntrlSetup'] = {'nameTempl':self.name+'Hip', 'icone':'circuloY','size':4,'color':(0,0,1) }
-        self.spineDict['spineFkCntrlSetup'] = {'nameTempl':self.name+'SpineFk', 'icone':'circuloY','size':2,'color':(0,0,1) }      
-        self.spineDict['startFkCntrlSetup'] = {'nameTempl':self.name+'StartFk', 'icone':'cubo','size':1,'color':(0,1,0)}
-        self.spineDict['midFkOffsetCntrlSetup'] = {'nameTempl':self.name+'MidFkOff', 'icone':'circuloY', 'size':2, 'color':(1,1,0) }
-        self.spineDict['midFkCntrlSetup'] = {'nameTempl':self.name+'MidFk', 'icone':'cubo', 'size':1, 'color':(0,1,0) }
-        self.spineDict['endFkCntrlSetup'] = {'nameTempl':self.name+'EndFk', 'icone':'cubo', 'size':1, 'color':(0,1,0) }
-        self.spineDict['startIkCntrlSetup'] = {'nameTempl':self.name+'StartIk', 'icone':'cubo', 'size':2, 'color':(1,0,0)}
-        self.spineDict['midIkCntrlSetup'] = {'nameTempl':self.name+'MidIk', 'icone':'circuloY', 'size':2, 'color':(1,1,0)}
-        self.spineDict['endIkCntrlSetup'] = {'nameTempl':self.name+'EndIk', 'icone':'cubo', 'size':2, 'color':(1,0,0)}      
+        self.spineDict['moveallSetup']={'nameTempl':self.name+'MoveAll', 'icone':'grp','size':1.8,'color':(1,1,0) }    
+        self.spineDict['hipCntrlSetup'] = {'nameTempl':self.name+'Hip', 'icone':'cog','size':5.5,'color':(0,0,1) }
+        self.spineDict['spineFkCntrlSetup'] = {'nameTempl':self.name+'SpineFk', 'icone':'circuloPontaY','size':4,'color':(0,1,0) }      
+        self.spineDict['startFkCntrlSetup'] = {'nameTempl':self.name+'StartFk', 'icone':'circuloPontaY','size':3.0,'color':(1,1,0)}
+        self.spineDict['midFkOffsetCntrlSetup'] = {'nameTempl':self.name+'MidFkOff', 'icone':'circuloY', 'size':2.5, 'color':(1,1,0) }
+        self.spineDict['midFkCntrlSetup'] = {'nameTempl':self.name+'MidFk', 'icone':'circuloPontaY', 'size':4, 'color':(0,1,0) }
+        self.spineDict['endFkCntrlSetup'] = {'nameTempl':self.name+'EndFk', 'icone':'circuloPontaY', 'size':4, 'color':(0,1,0) }
+        self.spineDict['startIkCntrlSetup'] = {'nameTempl':self.name+'StartIk', 'icone':'circuloPontaY', 'size':4, 'color':(1,0,0)}
+        self.spineDict['midIkCntrlSetup'] = {'nameTempl':self.name+'MidIk', 'icone':'circuloY', 'size':4, 'color':(1,1,0)}
+        self.spineDict['endIkCntrlSetup'] = {'nameTempl':self.name+'EndIk', 'icone':'circuloPontaY', 'size':4, 'color':(1,0,0)}      
+
+        self.spineDict['moveallGuideSetup']={'nameTempl':self.name+'Moveall','size':1.8,'color':(1,1,0) }    
+        self.spineDict['startGuideSetup'] = {'nameTempl':self.name+'Start', 'size':1,'color':(0,1,0)}
+        self.spineDict['midGuideSetup'] = {'nameTempl':self.name+'Mid',  'size':1, 'color':(0,1,0) }
+        self.spineDict['endGuideSetup'] = {'nameTempl':self.name+'End',  'size':1, 'color':(0,1,0) }
+        self.spineDict['startTipGuideSetup'] = {'nameTempl':self.name+'StartTip', 'size':1,'color':(0,1,0)}
+        self.spineDict['endTipGuideSetup'] = {'nameTempl':self.name+'EndTip',  'size':1, 'color':(0,1,0) }
+
+        self.spineDict['startJntSetup'] = {'nameTempl':self.name+'Start', 'icone':'Bone', 'size':2}
+        self.spineDict['endJntSetup'] = {'nameTempl':self.name+'End', 'icone':'Bone', 'size':2}      
+        
+        self.spineDict['guideDict'] = {}
+        self.spineGuideDict = {'moveall':[0,0,0],'start':[0,0,0],'mid':[0,4,0],'end':[0,8,0], 'startTip':[0,-1,0],'endTip':[0,10,0]}
+        self.spineDict.update(kwargs) 
+        self.spineGuideDict.update(self.spineDict['guideDict']) 
+        self.spineDict['guideDict']=self.spineGuideDict.copy()
 
     def doGuide(self, **kwargs):
+        self.spineGuideDict = self.spineDict['guideDict'].copy()
         self.spineGuideDict.update(kwargs)
+
         #se existir apaga
-        if pm.objExists (self.name+'Moveall_guide'):
-            pm.delete (self.name+'Moveall_guide')
-        ##cria os locators dos guides e liga a visualizacao do handle
-        self.spineGuideMoveall=pm.group (n=self.name+'Moveall_guide', em=True)
-        self.startGuide = pm.spaceLocator (n=self.name+'Start_guide', p=(0,0,0))
+        guideName=self.spineDict['moveallGuideSetup']['nameTempl']+self.guideSulfix
+        if pm.objExists (guideName):
+            pm.delete (guideName)
+        self.guideMoveall=pm.group (n=guideName, em=True)
+
+        if not pm.objExists('GUIDES'):
+            pm.group ( self.guideMoveall, n='GUIDES' )
+        else:
+            pm.parent ( self.guideMoveall, 'GUIDES')
+                    
+        guideName=self.spineDict['startGuideSetup']['nameTempl']+self.guideSulfix
+        self.startGuide = pm.spaceLocator (n=guideName, p=(0,0,0))
         self.startGuide.translate.set(self.spineGuideDict['start'])
-        self.startGuide.displayHandle.set(1)        
-        self.midGuide = pm.spaceLocator (n=self.name+'Mid_guide',p=(0,0,0))
+        self.startGuide.displayHandle.set(1)
+        
+        guideName=self.spineDict['midGuideSetup']['nameTempl']+self.guideSulfix               
+        self.midGuide = pm.spaceLocator (n=guideName,p=(0,0,0))
         self.midGuide.translate.set(self.spineGuideDict['mid'])
         self.midGuide.displayHandle.set(1)
-        self.endGuide = pm.spaceLocator (n=self.name+'End_guide', p=(0,0,0))
+
+        guideName=self.spineDict['endGuideSetup']['nameTempl']+self.guideSulfix               
+        self.endGuide = pm.spaceLocator (n=guideName, p=(0,0,0))
         self.endGuide.translate.set(self.spineGuideDict['end'])
         self.endGuide.displayHandle.set(1)
         midGuideGrp=pm.group (em=True)
         pm.pointConstraint (self.startGuide, self.endGuide, midGuideGrp, mo=False)
         self.midGuide.setParent(midGuideGrp)
 
-        self.endTipGuide = pm.spaceLocator (n=self.name+'EndTip_guide', p=(0,0,0))
+        guideName=self.spineDict['endTipGuideSetup']['nameTempl']+self.guideSulfix               
+        self.endTipGuide = pm.spaceLocator (n=guideName, p=(0,0,0))
         self.endTipGuide.translate.set(self.spineGuideDict['endTip'])
         self.endTipGuide.displayHandle.set(1)        
         self.endTipGuide.localScale.set(.5,.5,.5) 
         self.endTipGuide.setParent(self.endGuide)
-        self.startTipGuide = pm.spaceLocator (n=self.name+'StartTip_guide', p=(0,0,0))
+        
+        guideName=self.spineDict['startTipGuideSetup']['nameTempl']+self.guideSulfix               
+        self.startTipGuide = pm.spaceLocator (n=guideName, p=(0,0,0))
         self.startTipGuide.translate.set(self.spineGuideDict['startTip'])
         self.startTipGuide.displayHandle.set(1)        
         self.startTipGuide.localScale.set(.5,.5,.5) 
         self.startTipGuide.setParent(self.startGuide)
 
-        pm.parent (self.startGuide,midGuideGrp,self.endGuide, self.spineGuideMoveall)
-        self.spineGuideMoveall.translate.set (self.spineGuideDict['moveall'])
+        pm.parent (self.startGuide,midGuideGrp,self.endGuide, self.guideMoveall)
+        self.guideMoveall.translate.set (self.spineGuideDict['moveall'])
+
+    def getGuideFromScene(self):        
+        guideName=self.spineDict['moveallGuideSetup']['nameTempl']+self.guideSulfix
+        self.guideMoveall=pm.PyNode(guideName)
+        
+        guideName=self.spineDict['startGuideSetup']['nameTempl']+self.guideSulfix
+        self.startGuide = pm.PyNode(guideName)
+        
+        guideName=self.spineDict['midGuideSetup']['nameTempl']+self.guideSulfix               
+        self.midGuide = pm.PyNode(guideName)
+
+        guideName=self.spineDict['endGuideSetup']['nameTempl']+self.guideSulfix               
+        self.endGuide = pm.PyNode(guideName)
+
+        guideName=self.spineDict['endTipGuideSetup']['nameTempl']+self.guideSulfix               
+        self.endTipGuide = pm.PyNode(guideName)
+        
+        guideName=self.spineDict['startTipGuideSetup']['nameTempl']+self.guideSulfix               
+        self.startTipGuide = pm.PyNode(guideName)
                 
     def doRig(self):
         #se nao tiver guide, faz
-        if not self.spineGuideMoveall:
+        if not self.guideMoveall:
             self.doGuide()
-        #se ja existir rig, apaga   
-        if pm.objExists (self.spineDict['moveallSetup']['nameTempl']):
-            pm.delete (self.spineDict['moveallSetup']['nameTempl'])
-            
+        #se ja existir rig, apaga  
+        cntrlName = self.spineDict['moveallSetup']['nameTempl']
+        if pm.objExists (cntrlName):
+            pm.delete (cntrlName)
+
+        #cria o moveall da espinha
+        self.moveall=pm.group(n=cntrlName, em=True)
+        pos =pm.xform (self.guideMoveall, q=True, ws=True, t=True)
+        pm.xform (self.moveall, ws=True, t=pos)
+        if not pm.objExists('MOVEALL'):
+            pm.group ( self.moveall, n='MOVEALL' )
+        else:
+            pm.parent (self.moveall, 'MOVEALL')            
         spineRibbon=None
         
         #cria controles fk com nomes e setagem de display vindas do spineDict
@@ -1215,11 +1721,14 @@ class Spine:
         start=pm.xform(self.startGuide,q=True,t=True,ws=True)
         startTip=pm.xform(self.startTipGuide,q=True,t=True,ws=True)
         pm.select(cl=True)
-        self.startZeroJnt=pm.joint(p=(0,0,0))
+        jntName=self.spineDict['startJntSetup']['nameTempl']+self.zeroJxtSulfix
+        self.startZeroJnt=pm.joint(p=(0,0,0), n=jntName)
         pm.select(cl=True)
-        self.startJnt=pm.joint(p=(0,0,0))
+        jntName=self.spineDict['startJntSetup']['nameTempl']+self.jntSulfix
+        self.startJnt=pm.joint(p=(0,0,0), n=jntName)
         pm.select(cl=True)
-        self.startTipJnt=pm.joint(p=(0,0,0))
+        jntName=self.spineDict['startJntSetup']['nameTempl']+self.tipJxtSulfix
+        self.startTipJnt=pm.joint(p=(0,0,0), n=jntName)
      
         A=om.MVector(start)
         B=om.MVector(startTip)
@@ -1244,11 +1753,14 @@ class Spine:
         end=pm.xform(self.endGuide,q=True,t=True,ws=True)
         endTip=pm.xform(self.endTipGuide,q=True,t=True,ws=True)
         pm.select(cl=True)
-        self.endZeroJnt=pm.joint(p=(0,0,0))
+        jntName=self.spineDict['endJntSetup']['nameTempl']+self.zeroJxtSulfix
+        self.endZeroJnt=pm.joint(p=(0,0,0), n=jntName)
         pm.select(cl=True)
-        self.endJnt=pm.joint(p=(0,0,0))
+        jntName=self.spineDict['endJntSetup']['nameTempl']+self.jntSulfix
+        self.endJnt=pm.joint(p=(0,0,0), n=jntName)
         pm.select(cl=True)
-        self.endTipJnt=pm.joint(p=(0,0,0))
+        jntName=self.spineDict['endJntSetup']['nameTempl']+self.tipJxtSulfix
+        self.endTipJnt=pm.joint(p=(0,0,0), n=jntName)
 
         A=om.MVector(end)
         B=om.MVector(endTip)
@@ -1330,13 +1842,10 @@ class Spine:
         pm.pointConstraint (spineRibbon.endCntrl, self.endZeroJnt, mo=True)
         pm.orientConstraint (spineRibbon.endCntrl, self.endJnt, mo=True)
         
-        #cria o moveall da espinha
-        displaySetup= self.spineDict['moveallSetup'].copy()
-        cntrlName = displaySetup['nameTempl']
-        self.spineMoveall=pm.group(n=cntrlName, em=True)
         
         #e parenteia todo mundo
-        pm.parent (twistExtractor1.extractorGrp, twistExtractor2.extractorGrp, spineRibbon.moveall,self.midIkCntrl.getParent(),self.hipCntrl.getParent(), self.spineMoveall)
+        pm.parent (twistExtractor1.extractorGrp, twistExtractor2.extractorGrp, spineRibbon.moveall, self.hipCntrl)
+        pm.parent (self.midIkCntrl.getParent(),self.hipCntrl.getParent(), self.moveall)
 
 
         #conecta os twist extractors nos twists do ribbon
@@ -1344,13 +1853,13 @@ class Spine:
         twistExtractor2.extractor.extractTwist >> spineRibbon.endCntrl.twist
         
         #cria o node tree do blend ikfk
-        self.spineMoveall.addAttr ('ikfk', at='float', max=1, min=0, dv=1, k=1)
+        self.moveall.addAttr ('ikfk', at='float', max=1, min=0, dv=1, k=1)
         ikfkRev = pm.createNode('reverse')
         ikfkCond1 = pm.createNode('condition')
         ikfkCond2 = pm.createNode('condition')
-        self.spineMoveall.ikfk >> ikfkCond1.firstTerm
-        self.spineMoveall.ikfk >> ikfkCond2.firstTerm
-        self.spineMoveall.ikfk >> ikfkRev.inputX
+        self.moveall.ikfk >> ikfkCond1.firstTerm
+        self.moveall.ikfk >> ikfkCond2.firstTerm
+        self.moveall.ikfk >> ikfkRev.inputX
         
         #visibilidade ik fk        
         ikfkCond1.secondTerm.set (0)
@@ -1369,13 +1878,13 @@ class Spine:
         
         #blend dos constraints         
         weightAttr = cns1.target.connections(p=True, t='parentConstraint') #descobre parametros
-        self.spineMoveall.ikfk >> weightAttr[1]
+        self.moveall.ikfk >> weightAttr[1]
         ikfkRev.outputX >> weightAttr[0]
         weightAttr = cns2.target.connections(p=True, t='parentConstraint') #descobre parametros
-        self.spineMoveall.ikfk >> weightAttr[1]
+        self.moveall.ikfk >> weightAttr[1]
         ikfkRev.outputX >> weightAttr[0]
         weightAttr = cns3.target.connections(p=True, t='parentConstraint') #descobre parametros
-        self.spineMoveall.ikfk >> weightAttr[1]
+        self.moveall.ikfk >> weightAttr[1]
         ikfkRev.outputX >> weightAttr[0]
         
         #IMPLEMENTAR guardar a posicao dos guides
@@ -1398,52 +1907,122 @@ class Chain:
     def __init__(self, name='chain', flipAxis=False, numDiv=2, axis='X', **kwargs):
         self.axis=axis
         self.flipAxis=flipAxis
-        self.name=name
-        self.chainGuideDict={}
+        self.name=name 
         self.numDiv=numDiv
-        self.chainGuideMoveall={'moveall':[0,0,0]}
+        
+        self.guideList=[]
+        self.guideMoveall=None
+        
+        self.guideSulfix='_guide'
+        self.jntSulfix='_jnt'
+        self.jxtSulfix='_jxt'
+        self.tipJxtSulfix='Tip_jxt'
+        self.zeroJxtSulfix='Zero_jxt'
+        grpSulfix='_grp'
+        
+        self.chainGuideDict={'moveall':[0,0,0]}
         for i in range (self.numDiv):
             self.chainGuideDict['guide'+str(i+1)]=[0+i,0,0]
         #parametros de aparencia dos controles
         self.chainDict={'name':name, 'axis':axis, 'flipAxis':flipAxis}
         self.chainDict['moveAllCntrlSetup']={'nameTempl':self.name+'Moveall', 'icone':'circuloX','size':1.8,'color':(1,1,0) }    
-        self.chainDict['fkCntrlSetup'] = {'nameTempl':self.name+'Fk', 'icone':'cubo','size':.8,'color':(0,1,0) }    
+        self.chainDict['fkCntrlSetup'] = {'nameTempl':self.name+'ChainFk', 'icone':'cubo','size':.8,'color':(0,1,0) }    
+        self.chainDict['guideSetup'] = {'nameTempl':self.name+'Chain', 'size':.8,'color':(0,1,0) }    
+        self.chainDict['jntSetup'] = {'nameTempl':self.name+'Chain', 'icone':'Bone','size':.8 }    
 
+        self.chainDict['guideDict'] = {}
+        self.chainDict.update(kwargs) 
+        self.chainGuideDict.update(self.chainDict['guideDict']) 
+        self.chainDict['guideDict']=self.chainGuideDict.copy()
+        
     def doGuide(self, **kwargs):
+        self.chainGuideDict = self.chainDict['guideDict'].copy()
         self.chainGuideDict.update(kwargs)
         
         #apaga se existir
-        cntrlName=self.chainDict['moveAllCntrlSetup']['nameTempl']+'_guide'
+        cntrlName=self.chainDict['moveAllCntrlSetup']['nameTempl']+self.guideSulfix
         if pm.objExists(cntrlName):
             pm.delete (cntrlName)
-        self.chainGuideMoveall=pm.group(n=cntrlName, em=True)
+        self.guideMoveall=pm.group(n=cntrlName, em=True)
+
+        if not pm.objExists('GUIDES'):
+            pm.group ( self.guideMoveall, n='GUIDES' )
+        else:
+            pm.parent ( self.guideMoveall, 'GUIDES')
 
         self.guideList=[]
-        for i in range(len(self.chainGuideDict.keys())):
-            guideName= self.name+str(i)+'_guide'
+        for i in range(len(self.chainGuideDict.keys())-1):
+            guideName= self.chainDict['guideSetup']['nameTempl']+str(i)+self.guideSulfix
             guide= pm.spaceLocator (n=guideName,p=(0,0,0))
             self.guideList.append (guide)
-            pm.xform(guide, t=self.chainGuideDict['guide'+str(i+1)], ws=True)
-            pm.parent(guide, self.chainGuideMoveall)
+            guidePos = self.chainGuideDict['guide'+str(i+1)]
+            pm.xform(guide, t=guidePos, ws=True)
+            pm.parent(guide, self.guideMoveall)
+        self.guideMoveall.translate.set (self.chainGuideDict['moveall'])
 
-        self.chainGuideMoveall.translate.set (self.chainGuideMoveall['moveall'])
+    def getGuideFromScene(self):
+        cntrlName=self.chainDict['moveAllCntrlSetup']['nameTempl']+self.guideSulfix
+        self.guideMoveall=pm.PyNode(cntrlName)
+
+        self.guideList=[]
+        for i in range(len(self.chainGuideDict.keys())-1):
+            guideName= self.chainDict['guideSetup']['nameTempl']+str(i)+self.guideSulfix
+            guide= pm.PyNode(guideName)
+            self.guideList.append (guide)
+
+    def mirrorConnectGuide(self,chain):
+        if not self.guideMoveall:
+            self.doGuide()        
+        if not chain.guideMoveall:
+            chain.doGuide()
+            
+        self.mirrorGuide= pm.group (em=True, n=self.name+'MirrorGuide_grp') 
+        if not pm.objExists('GUIDES'):
+            pm.group ( self.name+'MirrorGuide_grp', n='GUIDES' )
+        else:
+            pm.parent ( self.name+'MirrorGuide_grp', 'GUIDES')
                    
+        self.guideMoveall.setParent (self.mirrorGuide)
+        self.mirrorGuide.scaleX.set (-1)
+        self.mirrorGuide.template.set (1)
+
+        chain.guideMoveall.translate >>  self.guideMoveall.translate
+        chain.guideMoveall.rotate >>  self.guideMoveall.rotate
+        chain.guideMoveall.scale >>  self.guideMoveall.scale
+        
+        for origin,mirror in zip (chain.guideList, self.guideList):
+            origin.translate >>  mirror.translate
+            origin.rotate >>  mirror.rotate
+            origin.scale >>  mirror.scale
+        
+        if chain.flipAxis:
+            self.flipAxis=False
+        else:
+            self.flipAxis=True            
+                               
     def doRig(self):
         # se nao tiver guide faz um padrao
-        if not self.chainGuideMoveall:
+        if not self.guideMoveall:
             self.doGuide()
             
         #apagar se ja houver um grupo moveall
         cntrlName=self.chainDict['moveAllCntrlSetup']['nameTempl']                     
         if pm.objExists(cntrlName):
             pm.delete (cntrlName)
-        self.chainMoveAll = pm.group(empty=True, n=cntrlName)
-
+        self.moveall = pm.group(empty=True, n=cntrlName)
+        pos =pm.xform (self.guideMoveall, q=True, ws=True, t=True)
+        pm.xform (self.moveall, ws=True, t=pos)
+        if not pm.objExists('MOVEALL'):
+            pm.group ( self.moveall, n='MOVEALL' )
+        else:
+            pm.parent (self.moveall, 'MOVEALL') 
         
         A=[]
         AB=[]
         last=None
+        print self.guideList
         for obj in self.guideList:
+            print obj
             p=pm.xform (obj, q=True, t=True, ws=True)
             P=om.MVector(p)
             #guarda na lista A as posicoes dos guides como MVector
@@ -1472,19 +2051,22 @@ class Chain:
             
         last=None
         self.jntList=[]
+        print AB
+        print A
         for i in range(len(AB)):
             #se a o vetor do bone coincidir com o eixo Z usa o eixo X de secundario
             dot=AB[i].normal()*Z
-            print dot
             if abs(dot) < 0.95:
                 normal=AB[i]^Z
+                print normal
             else:
                 normal=AB[i]^X
-            
+                print normal
             # descobre a matriz de transformacao orientada e desenha os joints     
             m=orientMatrix(AB[i], normal, A[i], self.axis)
             pm.select(cl=True)
-            jnt = pm.joint()
+            jntName=self.chainDict['jntSetup']['nameTempl']+str(i)+self.jntSulfix        
+            jnt = pm.joint(n=jntName)
             self.jntList.append(jnt)
             pm.xform (jnt, m = m, ws=True) 
             pm.makeIdentity (jnt, apply=True, r=1, t=0, s=1, n=0, pn=0)
@@ -1494,14 +2076,18 @@ class Chain:
         
         # desenha o ultimo joint (ou o unico)
         pm.select(cl=True)
-        jnt = pm.joint()
+        if self.numDiv==1:
+            jntName=self.chainDict['jntSetup']['nameTempl']+self.jntSulfix  
+        else:
+            jntName=self.chainDict['jntSetup']['nameTempl']+self.tipJxtSulfix      
+        jnt = pm.joint(n=jntName)
         self.jntList.append(jnt)
         pm.xform (jnt, m = m, ws=True)
         pm.xform (jnt, t=A[-1], ws=True) 
         pm.makeIdentity (jnt, apply=True, r=1, t=0, s=1, n=0, pn=0)
         pm.parent (jnt, last)
         
-        pm.parent (self.jntList[0], self.chainMoveAll)
+        pm.parent (self.jntList[0], self.moveall)
         
         #faz controles para os joints exceto o da ponta
         cntrlTodo=[]
@@ -1519,7 +2105,7 @@ class Chain:
                 pm.parent (cntrl.getParent(), last)
             last=cntrl    
             
-        pm.parent (self.cntrlList[0].getParent(), self.chainMoveAll)
+        pm.parent (self.cntrlList[0].getParent(), self.moveall)
         
         #IMPLEMENTAR: guardar as posicoes dos locators
                
@@ -1537,44 +2123,89 @@ class Neck:
         self.axis=axis
         self.flipAxis=flipAxis
         self.name=name
-        self.neckGuideDict={'moveall':[0,0,0],'start':[0,0,0], 'end':[0,2,0]}
-        self.neckGuideMoveall=None
+        self.guideMoveall=None
+        
+        self.guideSulfix='_guide'
+        self.jntSulfix='_jnt'
+        self.jxtSulfix='_jxt'
+        self.tipJxtSulfix='Tip_jxt'
+        self.zeroJxtSulfix='Zero_jxt'
+        grpSulfix='_grp'
+        
        #parametros de aparencia dos controles
         self.neckDict={'name':name, 'axis':axis, 'flipAxis':flipAxis}
         self.neckDict['moveAllCntrlSetup'] = {'nameTempl':name+'Moveall', 'icone':'circuloX','size':1,'color':(0,1,0) }
-        self.neckDict['startCntrlSetup'] = {'nameTempl':name+'Start', 'icone':'circuloY','size':1,'color':(0,1,0) }
-        self.neckDict['endCntrlSetup'] = {'nameTempl':name+'End', 'icone':'cubo', 'size':1, 'color':(0,1,0)}
+        self.neckDict['startCntrlSetup'] = {'nameTempl':'Neck', 'icone':'circuloY','size':3,'color':(0,1,0) }
+        self.neckDict['endCntrlSetup'] = {'nameTempl':'Head', 'icone':'circuloZ', 'size':2, 'color':(0,1,0)}
 
+        self.neckDict['moveAllGuideSetup'] = {'nameTempl':name+'Moveall'}
+        self.neckDict['startGuideSetup'] = {'nameTempl':'neck', 'size':1,'color':(0,1,0) }
+        self.neckDict['endGuideSetup'] = {'nameTempl':'head', 'size':1, 'color':(0,1,0)}
+
+        self.neckDict['startGuideSetup'] = {'nameTempl':'neck', 'size':1,'color':(0,1,0) }
+        self.neckDict['midGuideSetup'] = {'nameTempl':'midNeck', 'size':1, 'color':(0,1,0)}
+        self.neckDict['endGuideSetup'] = {'nameTempl':'head', 'size':1, 'color':(0,1,0)}
+
+        self.neckDict['guideDict'] = {}
+        self.neckDict.update(kwargs) 
+        self.neckGuideDict ={'moveall':[0,0,0],'start':[0,0,0], 'end':[0,2,0]}
+        self.neckGuideDict.update(self.neckDict['guideDict']) 
+        self.neckDict['guideDict']=self.neckGuideDict.copy()
 
 
     def doGuide(self, **kwargs):
+        self.neckGuideDict = self.neckDict['guideDict'].copy()
         self.neckGuideDict.update(kwargs)
         
         #apaga se existir
-        cntrlName=self.neckDict['moveAllCntrlSetup']['nameTempl']+'_guide'
+        cntrlName=self.neckDict['moveAllGuideSetup']['nameTempl']+self.guideSulfix
         if pm.objExists(cntrlName):
             pm.delete (cntrlName)
-        self.neckGuideMoveall=pm.group(n=cntrlName, em=True)
+        self.guideMoveall=pm.group(n=cntrlName, em=True)
 
-        self.startGuide=pm.spaceLocator (p=(0,0,0))
+        if not pm.objExists('GUIDES'):
+            pm.group ( self.guideMoveall, n='GUIDES' )
+        else:
+            pm.parent ( self.guideMoveall, 'GUIDES')
+
+        cntrlName=self.neckDict['startGuideSetup']['nameTempl']+self.guideSulfix
+        self.startGuide=pm.spaceLocator (p=(0,0,0), n=cntrlName)
         pm.xform (self.startGuide, t=self.neckGuideDict['start'], ws=True)
-        self.endGuide=pm.spaceLocator (p=(0,0,0))
-        pm.xform (self.endGuide, t=self.neckGuideDict['end'], ws=True)
-        pm.parent (self.startGuide,self.endGuide,self.neckGuideMoveall)
         
-        self.neckGuideMoveall.translate.set(self.neckGuideDict['moveall'])
-                   
+        cntrlName=self.neckDict['endGuideSetup']['nameTempl']+self.guideSulfix
+        self.endGuide=pm.spaceLocator (p=(0,0,0),n=cntrlName)
+        pm.xform (self.endGuide, t=self.neckGuideDict['end'], ws=True)
+        pm.parent (self.startGuide,self.endGuide,self.guideMoveall)
+        
+        self.guideMoveall.translate.set(self.neckGuideDict['moveall'])
+
+    def getGuideFromScene(self):
+        cntrlName=self.neckDict['moveAllGuideSetup']['nameTempl']+self.guideSulfix
+        self.guideMoveall=pm.PyNode(cntrlName)
+
+        cntrlName=self.neckDict['startGuideSetup']['nameTempl']+self.guideSulfix
+        self.startGuide=pm.PyNode(cntrlName)
+        
+        cntrlName=self.neckDict['endGuideSetup']['nameTempl']+self.guideSulfix
+        self.endGuide=pm.PyNode(cntrlName)    
+                       
     def doRig(self):
         # se nao tiver guide faz um padrao
-        if not self.neckGuideMoveall:
+        if not self.guideMoveall:
             self.doGuide()
             
         #apagar se ja houver um grupo moveall
         cntrlName=self.neckDict['moveAllCntrlSetup']['nameTempl']                     
         if pm.objExists(cntrlName):
             pm.delete (cntrlName)
-        self.neckMoveAll = pm.group(empty=True, n=cntrlName)
-
+        self.moveall = pm.group(empty=True, n=cntrlName)
+        pos =pm.xform (self.guideMoveall, q=True, ws=True, t=True)
+        pm.xform (self.moveall, ws=True, t=pos)
+        if not pm.objExists('MOVEALL'):
+            pm.group ( self.moveall, n='MOVEALL' )
+        else:
+            pm.parent (self.moveall, 'MOVEALL')
+            
         #doRig
         start =pm.xform (self.startGuide, q=True, t=True,ws=True)
         end =pm.xform (self.endGuide, q=True, t=True,ws=True)
@@ -1590,38 +2221,43 @@ class Neck:
         n=AB^Z
         m= orientMatrix(mvector=AB, normal=n, pos=A, axis=self.axis)
         pm.select (cl=True)
-        j1 = pm.joint()
-        pm.xform (j1, m = m, ws=True) 
-        pm.makeIdentity (j1, apply=True, r=1, t=0, s=1, n=0, pn=0)
         
-        j2 = pm.joint()
-        pm.xform (j2, m = m, ws=True) 
-        pm.xform (j2, t=B ,ws=True)
-        pm.makeIdentity (j2, apply=True, r=1, t=0, s=1, n=0, pn=0)
+        jntName= self.neckDict['startGuideSetup']['nameTempl']+self.jntSulfix
+        self.startJnt = pm.joint(n=jntName)
+        pm.xform (self.startJnt, m = m, ws=True) 
+        pm.makeIdentity (self.startJnt, apply=True, r=1, t=0, s=1, n=0, pn=0)
+
+        jntName= self.neckDict['endGuideSetup']['nameTempl']+self.jntSulfix        
+        self.endJnt = pm.joint(n=jntName)
+        pm.xform (self.endJnt, m = m, ws=True) 
+        pm.xform (self.endJnt, t=B ,ws=True)
+        pm.makeIdentity (self.endJnt, apply=True, r=1, t=0, s=1, n=0, pn=0)
         pm.select (cl=True)
-        j3 = pm.joint()
-        pm.xform (j3, m = m, ws=True) 
-        pm.xform (j3, t=(0,0,0) ,ws=True)
-        pm.makeIdentity (j3, apply=True, r=1, t=0, s=1, n=0, pn=0)
+
+        jntName= self.neckDict['midGuideSetup']['nameTempl']+self.jntSulfix        
+        self.midJnt = pm.joint(n=jntName)
+        pm.xform (self.midJnt, m = m, ws=True) 
+        pm.xform (self.midJnt, t=(0,0,0) ,ws=True)
+        pm.makeIdentity (self.midJnt, apply=True, r=1, t=0, s=1, n=0, pn=0)
         
         aimTwist = AimTwistDivider()
-        aimTwist.start.setParent (j1,r=True)
-        aimTwist.end.setParent (j2,r=True)
-        aimTwist.mid.setParent (self.neckMoveAll)
-        j3.setParent(aimTwist.mid)
-        j3.translate.set(0,0,0)
-        j3.rotate.set(0,0,0)
+        aimTwist.start.setParent (self.startJnt,r=True)
+        aimTwist.end.setParent (self.endJnt,r=True)
+        aimTwist.mid.setParent (self.moveall)
+        self.midJnt.setParent(aimTwist.mid)
+        self.midJnt.translate.set(0,0,0)
+        self.midJnt.rotate.set(0,0,0)
         
         displaySetup= self.neckDict['startCntrlSetup'].copy()
         cntrlName = displaySetup['nameTempl']        
         self.startCntrl = cntrlCrv(name=cntrlName, obj=self.startGuide, **displaySetup)
-        pm.parentConstraint(self.startCntrl, j1,mo=True)      
+        pm.parentConstraint(self.startCntrl, self.startJnt,mo=True)      
         displaySetup= self.neckDict['endCntrlSetup'].copy()
         cntrlName = displaySetup['nameTempl']                
         self.endCntrl = cntrlCrv(name=cntrlName, obj=self.endGuide,**displaySetup)
-        pm.parentConstraint(self.endCntrl, j2,mo=True)
+        pm.parentConstraint(self.endCntrl, self.endJnt,mo=True)
         self.endCntrl.getParent().setParent(self.startCntrl)
-        pm.parent (j1,self.startCntrl.getParent(),self.neckMoveAll)
+        pm.parent (self.startJnt,self.startCntrl.getParent(),self.moveall)
 
         #IMPLEMENTAR: guardar as posicoes dos guides ao final
         

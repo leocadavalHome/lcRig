@@ -1,6 +1,7 @@
 import maya.api.OpenMaya as om
 import pymel.core as pm
 import time
+import cPickle as pickle
 
 def doLoc(name, pos):
     loc = pm.spaceLocator(n=name)
@@ -148,15 +149,95 @@ def sjobMidPoint():
     for g in geos:
         calcMidPoint('locator1', g)
      
-start_time = time.time()
-sjobMidPoint()
-print("--- %s seconds ---" % (time.time() - start_time))
+#start_time = time.time()
+#sjobMidPoint()
+#print("--- %s seconds ---" % (time.time() - start_time))
 
 
 
-jobNum = cmds.scriptJob( attributeChange=['locator1.translate', sjobMidPoint] )
-jobNum1 = cmds.scriptJob( attributeChange=['locator1.rotate', sjobMidPoint] )
+#jobNum = cmds.scriptJob( attributeChange=['locator1.translate', sjobMidPoint] )
+#jobNum1 = cmds.scriptJob( attributeChange=['locator1.rotate', sjobMidPoint] )
 
 #cmds.scriptJob( kill=jobNum, force=True)
 #cmds.scriptJob( kill=jobNum1, force=True)
 #cmds.scriptJob(  ka=True)
+
+
+def findSkinCluster(mesh):
+    skincluster = None
+    for each in pm.listHistory(mesh):  
+        if type(each)==pm.nodetypes.SkinCluster:   
+            skincluster = each
+    return skincluster
+
+def saveSkinning(mesh,path):
+    dataDict ={} 
+    skincluster = findSkinCluster(mesh)
+    if skincluster!=None:     
+        for infl in skincluster.getInfluence():
+            vtxList =[]
+            getData = skincluster.getPointsAffectedByInfluence(infl) 
+            if getData[0] and getData[1]: 
+                for vtx, wgt in zip (getData[0][0],getData[1]):
+                    vtxList.append ((vtx.currentItemIndex(),wgt))                   
+                dataDict[infl]= vtxList
+    
+    with open(path, 'wb') as handle:
+        pickle.dump(dataDict, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    print 'skin saving ok!'
+    
+def loadSkinning(mesh,path):
+    skincluster = findSkinCluster(mesh)
+    
+    with open(path, 'rb') as handle:
+        dataDict = pickle.load(handle)
+        
+    if skincluster!=None:
+        skincluster.setNormalizeWeights(0)
+        pm.skinPercent(skincluster, mesh, nrm=False, prw=100)
+        
+        jointDict = {}
+        for storedJoint in dataDict :
+            jointDict[storedJoint]=skincluster.indexForInfluenceObject(storedJoint)
+               
+        for infl in dataDict :
+            for vtx in dataDict[infl]:
+                pm.setAttr (skincluster.name()+'.weightList['+str(vtx[0])+'].weights['+str (jointDict[infl]) +']', vtx[1])
+        skincluster.setNormalizeWeights(1)
+        print 'skin loading ok!'    
+             
+#mesh= 'corpo'
+#path = 'C:/Users/vzprojeto/Documents/leo/skin.pickle'
+#jnts = pm.ls ('*_jnt', type='joint')
+#pm.skinCluster (jnts, mesh)
+#loadSkinning(mesh,path)
+
+def saveCntrlsShape(objs, path):
+    sel=[x for x in objs if '_cntrl' in x.name()]    
+    filename= path
+    cntrlShapeDict={}
+    for obj in sel:
+        tempDict={}
+        for shp in obj.getShapes():
+            if pm.nodeType (shp)=='nurbsCurve':
+                pointList=[]
+                for i in range (len (shp.cv)):
+                    pointList.append (pm.pointPosition (shp.cv[i], l=True))
+                tempDict[shp.name()]=pointList
+        cntrlShapeDict[obj.name()]=tempDict 
+    with open(filename, 'wb') as f:
+        pickle.dump(cntrlShapeDict, f)
+    print 'cntrl save ok'
+
+def loadCntrlShape(path):
+    cntrlShapeDict={}
+    filename= path
+    with open(filename,'rb') as f:
+        cntrlShapeDict  =  pickle.load(f)
+    for obj in cntrlShapeDict:
+        for s in cntrlShapeDict[obj]:
+            shp = pm.PyNode(s)
+            if len (shp.cv) == len(cntrlShapeDict[obj][s]):
+                for i in range (len (shp.cv)):
+                    pm.xform (shp.cv[i], t=cntrlShapeDict[obj][s][i])
+    print 'cntrl load ok'        
