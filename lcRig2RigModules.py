@@ -23,7 +23,7 @@ class Moveall:
         else:    
             self.guideGrp = pm.group (em=True, n='GUIDES')
         pm.parent (self.guideGrp, self.guideMoveall)
-                
+                        
     def doRig(self):
         if not self.guideGrp:
             self.doGuide()
@@ -39,7 +39,6 @@ class Moveall:
             self.moveallGrp = pm.PyNode('MOVEALL')
         else:    
             self.moveallGrp = pm.group (em=True, n='MOVEALL')
-        print self.moveallGrp
         if pm.objExists('NOMOVE'):
             self.nomoveGrp=pm.PyNode('NOMOVE')
         else:    
@@ -61,7 +60,6 @@ class Moveall:
         
         pm.delete (self.guideMoveall.getParent())
         self.guideGrp.visibility.set(0)
-        
                     
 class Limb():
     """
@@ -132,7 +130,7 @@ class Limb():
         self.limbDict['guideDict']=self.limbGuideDict.copy()
         #self.limbDict['nodeTree'] = {}
         #self.limbDict['nameConventions'] = None
-
+        
     def doGuide(self,**kwargs):        
         self.limbGuideDict =  self.limbDict['guideDict'].copy()
         self.limbGuideDict.update(kwargs)
@@ -196,8 +194,6 @@ class Limb():
             if self.lastJoint:
                 guideName=self.limbDict['lastGuideSetup']['nameTempl']+self.guideSulfix
                 self.lastGuide = pm.PyNode(guideName)
-
-            print 'guide do %s OK!' % self.name
 
         except:
             print 'algum nao funcionou'
@@ -960,8 +956,7 @@ class Hand:
                                                 }
         self.handDict.update(kwargs)
         
-        for finger in self.handDict['fingers']: 
-            print finger                                                      
+        for finger in self.handDict['fingers']:                                                       
             f=Finger(name=self.handDict['fingers'][finger]['name'],axis=self.axis,flipAxis=self.flipAxis,folds=self.folds)                                 
             self.handDict['fingers'][finger]['instance'] = f
             
@@ -2020,9 +2015,7 @@ class Chain:
         A=[]
         AB=[]
         last=None
-        print self.guideList
         for obj in self.guideList:
-            print obj
             p=pm.xform (obj, q=True, t=True, ws=True)
             P=om.MVector(p)
             #guarda na lista A as posicoes dos guides como MVector
@@ -2051,17 +2044,13 @@ class Chain:
             
         last=None
         self.jntList=[]
-        print AB
-        print A
         for i in range(len(AB)):
             #se a o vetor do bone coincidir com o eixo Z usa o eixo X de secundario
             dot=AB[i].normal()*Z
             if abs(dot) < 0.95:
                 normal=AB[i]^Z
-                print normal
             else:
                 normal=AB[i]^X
-                print normal
             # descobre a matriz de transformacao orientada e desenha os joints     
             m=orientMatrix(AB[i], normal, A[i], self.axis)
             pm.select(cl=True)

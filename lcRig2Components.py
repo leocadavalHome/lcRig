@@ -724,22 +724,18 @@ class RibbonBezier:
             pos = pm.xform (anchor, q=True, ws=True, rp=True)  
             pm.xform (anchorGrp, t=pos, ws=True)
             pm.parent (anchor[1], anchorDrn)   
-            anchorList.append (anchor[1])
-            print i             
+            anchorList.append (anchor[1])            
             if i==0 or i==6:
-                print '0 ou 6'
                 displaySetup= self.ribbonDict['cntrlSetup'].copy()                               
                 cntrlName = displaySetup['nameTempl']+str(i)           
                 cntrl = cntrlCrv (name=cntrlName, obj=anchor[1],**displaySetup)
             elif i==3:
-                print '3'
                               
                 displaySetup= self.ribbonDict['midCntrlSetup'].copy()                               
                 cntrlName = displaySetup['nameTempl']+str(i)           
                 cntrl = cntrlCrv (name=cntrlName, obj=anchor[1],**displaySetup)
 
             else:
-                print 'tang'
                 displaySetup= self.ribbonDict['cntrlTangSetup'].copy()                               
                 cntrlName = displaySetup['nameTempl']+str(i) 
                 cntrl = cntrlCrv (name=cntrlName, obj=anchor[1],**displaySetup)
@@ -763,8 +759,7 @@ class RibbonBezier:
             loc.translate >> anchorDrn.translate
             loc.rotate >> anchorDrn.rotate
             cntrlList.append(cntrl)
-            locList.append (loc)
-        print cntrlList        
+            locList.append (loc)        
         cntrlsSpace.addAttr ('cntrlsVis', at='double', dv=1, k=False, h=True)
         cntrlsSpace.addAttr ('extraCntrlsVis', at='double', dv=0, k=False, h=True)            
         cntrlList[0].addAttr ('twist', at='double', dv=0, k=True)
@@ -1635,22 +1630,18 @@ class RibbonBezierSimple:
             pm.xform (anchorGrp, t=pos, ws=True)
             pm.parent (anchor[1], anchorDrn)   
             anchorList.append (anchor[1])
-                                    
-            print i             
+                                                 
             if i==0 or i==6:
-                print '0 ou 6'
                 displaySetup= self.ribbonDict['cntrlSetup'].copy()                               
                 cntrlName = displaySetup['nameTempl']+str(i)           
                 cntrl = cntrlCrv (name=cntrlName, obj=anchor[1],**displaySetup)
             elif i==3:
-                print '3'
                               
                 displaySetup= self.ribbonDict['midCntrlSetup'].copy()                               
                 cntrlName = displaySetup['nameTempl']+str(i)           
                 cntrl = cntrlCrv (name=cntrlName, obj=anchor[1],**displaySetup)
 
             else:
-                print 'tang'
                 displaySetup= self.ribbonDict['cntrlTangSetup'].copy()                               
                 cntrlName = displaySetup['nameTempl']+str(i) 
                 cntrl = cntrlCrv (name=cntrlName, obj=anchor[1],**displaySetup)
