@@ -14,42 +14,91 @@ class Moveall:
     def __init__(self, name='character',connType='parent', **kwargs):
         self.name=name
         self.conn=connType
-        self.guideGrp=None
-                
+        self.guideMoveall=None
+        self.guideSulfix='_guide'
+        self.moveallDict={'name':self.name,
+                          'conn':self.conn,
+                          'guideDict': {'moveall':[0,0,0]} }
+        self.moveallGuideDict = {'moveall':[0,0,0]} 
+        self.moveallDict['moveallGuideSetup']={'nameTempl':self.name+'MoveAll','size':8,'icone':'circuloPontaY', 'color':(1,0,0)}
+
+        self.moveallDict.update(kwargs) 
+        self.moveallGuideDict.update(self.moveallDict['guideDict']) 
+        self.moveallDict['guideDict']=self.moveallGuideDict.copy()                
+        
     def doGuide(self):
-        self.guideMoveall = cntrlCrv(name=self.name+'GuideMoveall', icone='circuloPontaY', size=8, color=(1,0,0))
+        guideName=self.moveallDict['moveallGuideSetup']['nameTempl']+self.guideSulfix
+        if pm.objExists(guideName):
+            pm.delete (guideName)                
+        self.guideMoveall=pm.group(n=guideName, em=True)
+        
+        displaySetup= self.moveallDict['moveallGuideSetup'].copy()
+        cntrlName = displaySetup['nameTempl'] 
+        self.guideMoveallCrv = cntrlCrv(name=cntrlName, **displaySetup)
+        self.guideMoveallCrv.getParent().setParent(self.guideMoveall)
+        
         if pm.objExists('GUIDES'):
             self.guideGrp=pm.PyNode('GUIDES')
         else:    
             self.guideGrp = pm.group (em=True, n='GUIDES')
-        pm.parent (self.guideGrp, self.guideMoveall)
-                        
+        pm.parent (self.guideMoveall, self.guideGrp)
+
+    def getGuideFromScene(self):
+        guideName=self.moveallDict['moveallGuideSetup']['nameTempl']+self.guideSulfix               
+
+        self.guideMoveall=pm.PyNode(guideName)
+        
+        displaySetup= self.moveallDict['moveallGuideSetup'].copy()
+        cntrlName = displaySetup['nameTempl']+'_cntrl'
+        self.guideMoveallCrv = pm.PyNode(cntrlName)
+        
+
+
     def doRig(self):
-        if not self.guideGrp:
+        if not self.guideMoveall:
             self.doGuide()
-            
-        self.moveall3 = cntrlCrv(name=self.name+'Moveall3', icone='circuloPontaY', size=8)
-        self.moveall2 = cntrlCrv(name=self.name+'Moveall2', icone='circuloPontaY', size=7)
+        if pm.objExists('GUIDES'):
+            self.guideGrp=pm.PyNode('GUIDES')
+        else:    
+            self.guideGrp = pm.group (em=True, n='GUIDES')
+        if pm.objExists('MOVEALL'):
+            self.moveallGrp = pm.PyNode('MOVEALL')
+            self.moveallGrp.setParent(w=True)
+        else:    
+            self.moveallGrp = pm.group (em=True, n='MOVEALL')
+
+        if pm.objExists('NOMOVE'):
+            self.nomoveGrp=pm.PyNode('NOMOVE')
+            self.nomoveGrp.setParent(w=True)
+        else:    
+            self.nomoveGrp = pm.group (em=True, n='NOMOVE')
+
+        if pm.objExists('DATA'):
+            self.dataGrp = pm.PyNode('DATA')
+            self.dataGrp.setParent(w=True)
+        else:    
+            self.dataGrp = pm.group (em=True, n='DATA')
+
+        if pm.objExists('MESH'):
+            self.meshGrp=pm.PyNode('MESH')
+            self.meshGrp.setParent(w=True)
+        else:    
+            self.meshGrp = pm.group (em=True, n='MESH')            
+
+        if pm.objExists(self.name.upper()):
+            pm.delete (self.name.upper())
+
+                    
+        self.moveall3 = cntrlCrv(name=self.name+'Moveall3', icone='circuloPontaY', size=10)
+        self.moveall2 = cntrlCrv(name=self.name+'Moveall2', icone='circuloPontaY', size=8)
         self.moveall = cntrlCrv(name=self.name+'Moveall', icone='circuloPontaY', size=6)
         
         self.moveall.getParent().setParent(self.moveall2)
         self.moveall2.getParent().setParent(self.moveall3)
- 
-        if pm.objExists('MOVEALL'):
-            self.moveallGrp = pm.PyNode('MOVEALL')
-        else:    
-            self.moveallGrp = pm.group (em=True, n='MOVEALL')
-        if pm.objExists('NOMOVE'):
-            self.nomoveGrp=pm.PyNode('NOMOVE')
-        else:    
-            self.nomoveGrp = pm.group (em=True, n='NOMOVE')
                      
-        self.dataGrp = pm.group (em=True, n='DATA')  
-        self.meshGrp = pm.group (em=True, n='MESH')  
-       
         #aqui ver se eh melhor ter o o grupo MOVEALL na pasta DATA ou filho dos controles moveall
         #por default vai
-        self.guideGrp.setParent (self.dataGrp)
+        #self.guideGrp.setParent (self.dataGrp)
         self.nomoveGrp.setParent (self.dataGrp)
         rigGrp = pm.group (self.moveall3.getParent(),self.dataGrp,self.meshGrp,  n=self.name.upper())
 
@@ -58,7 +107,6 @@ class Moveall:
         else:
             self.moveallGrp.setParent(self.dataGrp)   
         
-        pm.delete (self.guideMoveall.getParent())
         self.guideGrp.visibility.set(0)
                     
 class Limb():
@@ -513,7 +561,10 @@ class Limb():
         startGrp.worldMatrix[0] >> stretchDist.inMatrix1
         endGrp.worldMatrix[0] >> stretchDist.inMatrix2
         
-        self.moveall.scaleX >> stretchMultiScale.input1
+        stretchDecompMatrix = pm.createNode('decomposeMatrix')
+        self.moveall.worldMatrix[0] >> stretchDecompMatrix.inputMatrix
+        stretchDecompMatrix.outputScale.outputScaleX >> stretchMultiScale.input1
+        
         stretchMultiScale.input2.set (distMax)
         stretchMultiScale.output >> stretchManualStretch1.input2
         stretchManualStretch1.output >> stretchNorm.input2X
@@ -1366,12 +1417,12 @@ class Foot:
         #base cntrl
         displaySetup= self.footDict['baseCntrlSetup'].copy()
         cntrlName = displaySetup['nameTempl']        
-        baseCntrl=cntrlCrv(name=cntrlName,obj=self.centerGuide, **displaySetup)
-        pm.move (.8,0,0, baseCntrl, r=True, os=True)
-        pm.xform (baseCntrl, rp=ankle, ws=True)
-        pm.scale (baseCntrl, [1,1,.5], r=True)
-        pm.makeIdentity (baseCntrl, apply=True, r=0, t=1, s=1, n=0, pn=0)
-        baseCntrl.addAttr ('extraRollCntrls',min=0, max=1, dv=0, k=1)
+        self.baseCntrl=cntrlCrv(name=cntrlName,obj=self.centerGuide, **displaySetup)
+        pm.move (.8,0,0, self.baseCntrl, r=True, os=True)
+        pm.xform (self.baseCntrl, rp=ankle, ws=True)
+        pm.scale (self.baseCntrl, [1,1,.5], r=True)
+        pm.makeIdentity (self.baseCntrl, apply=True, r=0, t=1, s=1, n=0, pn=0)
+        self.baseCntrl.addAttr ('extraRollCntrls',min=0, max=1, dv=0, k=1)
         
         #slidePivot
         displaySetup= self.footDict['slideCntrlSetup'].copy()
@@ -1388,7 +1439,7 @@ class Foot:
         displaySetup= self.footDict['inCntrlSetup'].copy()
         cntrlName = displaySetup['nameTempl']
         inCntrl = cntrlCrv(name=cntrlName,obj=self.inGuide, **displaySetup)
-        baseCntrl.extraRollCntrls >> inCntrl.getParent().visibility        
+        self.baseCntrl.extraRollCntrls >> inCntrl.getParent().visibility        
         displaySetup= self.footDict['inCntrlSetup'].copy()
         cntrlName = displaySetup['nameTempl']
         outCntrl = cntrlCrv(name=cntrlName,obj=self.outGuide,**displaySetup)
@@ -1428,13 +1479,13 @@ class Foot:
         outCntrl.getParent().setParent(inCntrl)
         inCntrl.getParent().setParent(slideCompensateGrp)
         rollCntrl.getParent().setParent(slideCompensateGrp)
-        slideCntrl.getParent().setParent(baseCntrl)
+        slideCntrl.getParent().setParent(self.baseCntrl)
         ballIkh[0].setParent (ballCntrl)
         ballIkh[0].visibility.set(0)
         tipIkh[0].setParent (toeCntrl)
         tipIkh[0].visibility.set(0)
         self.limbConnectionCntrl.getParent().setParent (ballCntrl)
-        pm.parent (j1,baseCntrl.getParent(),self.moveall)
+        pm.parent (j1,self.baseCntrl.getParent(),self.moveall)
         
         #rollCntrl
         rollCntrl.addAttr ('heelLimit',dv=50,k=1,at='float')
@@ -1504,7 +1555,7 @@ class Foot:
         ikfkVisCond1.operation.set (2)
         ikfkVisCond1.colorIfTrueR.set (1)
         ikfkVisCond1.colorIfFalseR.set (0)
-        ikfkVisCond1.outColorR >> baseCntrl.getParent().visibility
+        ikfkVisCond1.outColorR >> self.baseCntrl.getParent().visibility
         
         #blend dos constraints 
         self.moveall.ikfk >> ikfkVisCond2.firstTerm

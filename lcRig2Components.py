@@ -1012,14 +1012,14 @@ class RibbonBezier:
         #node tree
         aimBlend1 = pm.createNode('blendTwoAttr')
         aimBlend2 = pm.createNode('blendTwoAttr')
-        ribbonMoveAll.addAttr ('softTang1', at='float', dv=0, max=1, min=0,k=1)
-        ribbonMoveAll.addAttr ('softTang2', at='float', dv=0, max=1, min=0,k=1)
+        ribbonMidCntrl.addAttr ('softTang1', at='float', dv=0, max=1, min=0,k=1)
+        ribbonMidCntrl.addAttr ('softTang2', at='float', dv=0, max=1, min=0,k=1)
         aimBlend1.input[0].set(0)
         mid1AimGrp.rotateY >> aimBlend1.input[1]
         aimBlend2.input[0].set(0)
         mid2AimGrp.rotateY >> aimBlend2.input[1]
-        ribbonMoveAll.softTang1 >> aimBlend1.attributesBlender
-        ribbonMoveAll.softTang2 >> aimBlend2.attributesBlender
+        ribbonMidCntrl.softTang1 >> aimBlend1.attributesBlender
+        ribbonMidCntrl.softTang2 >> aimBlend2.attributesBlender
         aimBlend1.output >> mid1SpcSwithGrp.rotateY
         aimBlend2.output >> mid2SpcSwithGrp.rotateY
         
