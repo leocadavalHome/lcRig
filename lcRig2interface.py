@@ -236,8 +236,9 @@ def loadCntrlShape(path):
         cntrlShapeDict  =  pickle.load(f)
     for obj in cntrlShapeDict:
         for s in cntrlShapeDict[obj]:
-            shp = pm.PyNode(s)
-            if len (shp.cv) == len(cntrlShapeDict[obj][s]):
-                for i in range (len (shp.cv)):
-                    pm.xform (shp.cv[i], t=cntrlShapeDict[obj][s][i])
+            if pm.objExists (s):
+                shp = pm.PyNode(s)
+                if len (shp.cv) == len(cntrlShapeDict[obj][s]):
+                    for i in range (len (shp.cv)):
+                        pm.xform (shp.cv[i], t=cntrlShapeDict[obj][s][i])
     print 'cntrl load ok'        

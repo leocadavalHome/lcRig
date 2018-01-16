@@ -6,12 +6,14 @@ class Jaw:
         self.name = name
         
     def doGuide(self):
+        if pm.objExists(self.name+'Moveall_guide'):
+            pm.delete (self.name+'Moveall_guide')
                 
         self.guideMoveall=pm.group (em=True, n=self.name+'Moveall_guide')
         self.guideMoveall.translate.set (self.jawGuideDict['moveall'])
         
         self.lcornerGuide= pm.spaceLocator (n='lcorner')
-        self.lcornerGuide.translate.set (selfjawGuideDict['lcorner'])
+        self.lcornerGuide.translate.set (self.jawGuideDict['lcorner'])
         self.lcornerGuide.localScale.set (0.1,0.1,0.1)
         
         self.rcornerGuide= pm.spaceLocator (n='rcorner')
@@ -81,12 +83,18 @@ class Jaw:
         self.holdJnt = pm.joint (p=hold, n='hold_jnt')
         pivot=pm.xform (self.pivotGuide, q=True, ws=True, t=True)
         pivotJnt = pm.joint (p=pivot, n='pivot_jxt')
-        
-        self.jawCntrl= cntrlCrv (name='jawCntrl', obj=self.jawJnt, connType='parentConstraint', size=.5, icone='circuloZ')
+
+        jawCntrlDrv= cntrlCrv (name='jawCntrl_drv', obj=self.jawJnt, connType='parentConstraint', size=.5, icone='grp')       
+        self.jawCntrl= cntrlCrv (name='jawCntrl', obj=jawCntrlDrv, connType='connection', size=.5, icone='circuloZ')
         self.jawCntrl.addAttr ('L_cornerFollow', at='float',dv=0.5, k=1)
         self.jawCntrl.addAttr ('R_cornerFollow', at='float',dv=0.5, k=1)
-        
-        pm.parent (self.jawJnt, self.lcornerJnt,self.rcornerJnt, self.upperLipJnt, self.holdJnt, self.jawCntrl.getParent(), self.moveall)
+                
+        b = jaw
+        a = pivot        
+        shape = self.jawCntrl.getShape()
+        pm.move (b[0]-a[0],(b[1]-a[1])-.3,(b[2]-a[2])+.4, shape.cv, r=True)
+                
+        pm.parent (jawCntrlDrv.getParent(), self.jawJnt, self.lcornerJnt,self.rcornerJnt, self.upperLipJnt, self.holdJnt, self.jawCntrl.getParent(), self.moveall)
 
         multi1 = pm.createNode ('multiplyDivide')
         multi2 = pm.createNode ('multiplyDivide')
@@ -115,5 +123,6 @@ class Jaw:
         cond.outColor.outColorR >> self.upperLipJnt.rotateX
                
 j=Jaw(name='jaw')
+j.doGuide()
 j.getGuideFromScene()
 j.doRig()

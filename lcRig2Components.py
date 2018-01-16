@@ -464,8 +464,11 @@ def cntrlCrv(name='cntrl', obj=None, connType=None,offsets=0, **kwargs):
 
 def createSpc (driver, name, type=None):
 	drvGrp = pm.group (empty=True, n=name+'_drv')
+	pos=pm.xform (driver, q=True,ws=True,t=True)
+	pm.xform (drvGrp, t=pos, ws=True)
+
 	if driver:
-		pm.parentConstraint (driver, drvGrp)
+		pm.parentConstraint (driver, drvGrp, mo=True)
 	spcGrp = pm.group (empty=True, n=name+'_spc')
 	pm.parent (spcGrp, drvGrp) 
 	if not pm.objExists('spaces'):
@@ -1572,7 +1575,7 @@ class RibbonBezierSimple:
         self.ribbonDict['noMoveSetup']={'nameTempl':self.name+'NoMove'}    
 
         self.ribbonDict['cntrlSetup']={'nameTempl':self.name+'Pos','icone':'grp','size':0.6,'color':(0,0,1)}       
-        self.ribbonDict['midCntrlSetup']={'nameTempl':self.name+'Pos','icone':'circuloX','size':1,'color':(0,.6,1)}        
+        self.ribbonDict['midCntrlSetup']={'nameTempl':self.name+'Pos','icone':'grp','size':1,'color':(0,.6,1)}        
         self.ribbonDict['cntrlTangSetup']={'nameTempl':self.name+'Tang','icone':'bola','size':0.3,'color':(0,1,1)}        
         self.ribbonDict['cntrlExtraSetup']={'nameTempl':self.name+'Extra','icone':'circuloX','size':0.2}        
 

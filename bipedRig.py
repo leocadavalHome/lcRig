@@ -77,7 +77,7 @@ llegShoulder.getGuideFromScene()
 rlegShoulder=Chain(name='R_legShoulder' , fkCntrlSetup = {'nameTempl':'L_clavicleChainFk', 'icone':'dropMenosY','size':.4,'color':(0,1,0) }, flipAxis=True)
 rlegShoulder.getGuideFromScene()
 
-m=Moveall(name='homem')
+m=Moveall(name='menino')
 m.getGuideFromScene()
 
 ##Rig
@@ -141,17 +141,32 @@ pm.parent ( lleg.moveall, llegShoulder.jntList[-1])
 pm.parent ( lleg.ikCntrl.getParent(), lfoot.limbConnectionCntrl)
 pm.parent ( rleg.ikCntrl.getParent(), rfoot.limbConnectionCntrl)
 
+pm.parentConstraint ( lleg.startCntrl, lfoot.ankleFkCntrl, mo=True)
+pm.parentConstraint ( rleg.startCntrl, rfoot.ankleFkCntrl, mo=True)
 
 s.hipCntrl.addAttr ('L_Arm_IkFk', at='float', dv=1, max=1, min=0, k=1)
 s.hipCntrl.addAttr ('R_Arm_IkFk', at='float', dv=1, max=1, min=0, k=1)
 s.hipCntrl.addAttr ('L_Leg_IkFk', at='float', dv=1, max=1, min=0, k=1)
 s.hipCntrl.addAttr ('R_Leg_IkFk', at='float', dv=1, max=1, min=0, k=1)
 s.hipCntrl.addAttr ('Spine_IkFk', at='float', dv=1, max=1, min=0, k=1)
+
+s.hipCntrl.addAttr ('L_Arm_poleVec', at='float', dv=0, max=1, min=0, k=1)
+s.hipCntrl.addAttr ('R_Arm_poleVec', at='float', dv=0, max=1, min=0, k=1)
+s.hipCntrl.addAttr ('L_Leg_poleVec', at='float', dv=0, max=1, min=0, k=1)
+s.hipCntrl.addAttr ('R_Leg_poleVec', at='float', dv=0, max=1, min=0, k=1)
+
 s.hipCntrl.Spine_IkFk >> s.moveall.ikfk
 s.hipCntrl.R_Leg_IkFk >> rleg.moveall.ikfk
 s.hipCntrl.L_Leg_IkFk >> lleg.moveall.ikfk
+s.hipCntrl.R_Leg_IkFk >> rfoot.moveall.ikfk
+s.hipCntrl.L_Leg_IkFk >> lfoot .moveall.ikfk
 s.hipCntrl.R_Arm_IkFk >> rarm.moveall.ikfk
 s.hipCntrl.L_Arm_IkFk >> larm.moveall.ikfk
+
+s.hipCntrl.R_Arm_poleVec >> rarm.moveall.poleVec
+s.hipCntrl.L_Arm_poleVec >> larm.moveall.poleVec
+s.hipCntrl.R_Leg_poleVec >> rleg.moveall.poleVec
+s.hipCntrl.L_Leg_poleVec >> lleg.moveall.poleVec
 
 lfoot.baseCntrl.addAttr ('pin', at='float',min=0, max=1,dv=0, k=1)
 lfoot.baseCntrl.addAttr ('bias', at='float',min=-0.9, max=0.9, k=1)
@@ -194,11 +209,11 @@ createSpc (n.endJnt, 'head')
 
 addSpc (target=larm.ikCntrl, spaceList=['global','chest','cog','lclav'], switcher=larm.ikCntrl.getParent(), type='parent')
 addSpc (target=rarm.ikCntrl, spaceList=['global','chest','cog','rclav'], switcher=rarm.ikCntrl.getParent(), type='parent')
-addSpc (target=larm.poleVec, spaceList=['global','chest','cog','lclav'], switcher=larm.poleVec.getParent(), type='parent')
-addSpc (target=rarm.poleVec, spaceList=['global','chest','cog','rclav'], switcher=rarm.poleVec.getParent(), type='parent')
-addSpc (target=lleg.poleVec, spaceList=['global','chest','cog'], switcher=lleg.poleVec.getParent(), type='parent')
-addSpc (target=rleg.poleVec, spaceList=['global','chest','cog'], switcher=rleg.poleVec.getParent(), type='parent')
-addSpc (target=s.endIkCntrl, spaceList=['global','hip', 'cog'], switcher=s.endIkCntrl.getParent(), type='parent')
+addSpc (target=larm.poleVec, spaceList=['hip','global','chest','cog','lclav'], switcher=larm.poleVec.getParent(), type='parent')
+addSpc (target=rarm.poleVec, spaceList=['hip','global','chest','cog','rclav'], switcher=rarm.poleVec.getParent(), type='parent')
+addSpc (target=lleg.poleVec, spaceList=['hip','global','chest','cog'], switcher=lleg.poleVec.getParent(), type='parent')
+addSpc (target=rleg.poleVec, spaceList=['hip','global','chest','cog'], switcher=rleg.poleVec.getParent(), type='parent')
+addSpc (target=s.endIkCntrl, spaceList=['hip', 'global', 'cog'], switcher=s.endIkCntrl.getParent(), type='parent')
 addSpc (target=n.endCntrl, spaceList=['global','hip','chest','cog', 'neck'], switcher=n.endCntrl.getParent(), type='orient', posSpc=n.startJnt)
 addSpc (target=larm.endCntrl, spaceList=['global','hip','chest','cog', 'lclav'], switcher=larm.endCntrl.getParent(), type='orient', posSpc=lclav.jntList[-1])
 addSpc (target=rarm.endCntrl, spaceList=['global','hip','chest','cog', 'rclav'], switcher=rarm.endCntrl.getParent(), type='orient', posSpc=rclav.jntList[-1])

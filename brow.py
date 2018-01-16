@@ -1,11 +1,12 @@
 class EyeBrow:
     
-    def __init__(self, name='eyeBrow', flipAxis=False, **kwargs):
+    def __init__(self, name='eyeBrow', flipAxis=False,mesh=None, **kwargs):
         ##def doRig(self):
         self.name=name
         self.flipAxis=flipAxis
         self.guideMoveall=None
         self.guideList=[]
+        self.mesh=mesh
         self.browGuideNames = ['inTip1', 'inTip2', 'in', 'out', 'outTip2', 'outTip1']
         self.browGuideDict = {'inTip1':[0.3,0,0],'inTip2':[0,0,0], 'in':[.08,.09,0], 'out':[-.08,.09,0], 'outTip2':[0,0,0], 'outTip1':[-0.3,0,0]}
         
@@ -21,9 +22,11 @@ class EyeBrow:
         self.browDict.update(kwargs) 
         self.browGuideDict.update(self.browDict['guideDict']) 
         self.browDict['guideDict']=self.browGuideDict.copy()                
-        
-                
+                        
     def doGuide(self):#doGuide
+        if pm.objExists (self.name+'Moveall_guide'):
+            pm.delete (self.name+'Moveall_guide')
+
         self.guideMoveall=pm.group(em=True,n=self.name+'Moveall_guide')
         
         self.guideList=[]
@@ -46,21 +49,14 @@ class EyeBrow:
         pm.pointConstraint (self.guideList[5], grp2, e=True, w=.7)
         pm.pointConstraint (self.guideList[3], grp2, e=True, w=.3)
  
-    def mirrorConnectGuide(self, brow):
-        print 'mirror'
-        print self.guideMoveall
-        print brow.guideMoveall
+    def mirrorConnectGuide(self, brow):      
         if not self.guideMoveall:
-            print 'self'
             self.doGuide()   
                   
         if not brow.guideMoveall:
-            print 'brow'
             brow.doGuide()
             
-        print self.name+'MirrorGuide_grp'
         if pm.objExists (self.name+'MirrorGuide_grp'):
-            print 'existe'
             pm.delete (self.name+'MirrorGuide_grp')
 
         self.mirrorGuide= pm.group (em=True, n=self.name+'MirrorGuide_grp') 
@@ -83,16 +79,16 @@ class EyeBrow:
         else:
             self.flipAxis=True
 
-
     def getGuideFromScene(self):
         self.guideMoveall= pm.PyNode(self.name+'Moveall_guide')
-        print self.guideMoveall
         self.guideList
         for name in self.browGuideNames:
             guide=pm.PyNode(self.name+name)
             self.guideList.append(guide)
         
-    def doRig(self, mesh=None):
+    def doRig(self):
+        if pm.objExists (self.name+'Moveall'):
+            pm.delete (self.name+'Moveall')
         
         self.browMoveall=pm.group (em=True, n=self.name+'Moveall')
                 
@@ -115,39 +111,51 @@ class EyeBrow:
         nameList = ['inTip1', 'in','out','outTip1']
         pm.parent (self.wireCrv, clsList, self.browMoveall)
         
-        self.mesh=mesh
         self.cntrlList=[]
         displaySetup= self.browDict['allCntrlSetup'].copy()
+        cntrlName = displaySetup['nameTempl']+'_drv'
+
+        cntrlAllDrv= cntrlCrv (name=cntrlName,obj=self.guideList[2], icone='grp')        
+        cntrlAllDrv.getParent().setParent (self.browMoveall)
+
         cntrlName = displaySetup['nameTempl']
-        self.cntrlAll= cntrlCrv (name=cntrlName,obj=self.guideList[2], **displaySetup)        
+        self.cntrlAll= cntrlCrv (name=cntrlName,obj=cntrlAllDrv,connType='connection', **displaySetup)        
         self.cntrlAll.getParent().setParent (self.browMoveall)
         for cls,key in zip(clsList, nameList):
             grp=pm.group(em=True, n=cls.name()+'Aux_grp')
             aux=pm.group(em=True, n=cls.name()+'_aux', p=grp)
             pos=pm.xform (cls, q=True, ws=True, rp=True)
             pm.xform (aux, t=pos, ws=True)
-            pm.geometryConstraint (self.mesh,aux)
+            if self.mesh:
+                pm.geometryConstraint (self.mesh,aux)
             pm.parentConstraint (aux, cls, mo=True)
+
             displaySetup= self.browDict[key+'CntrlSetup'].copy()
+            cntrlName = displaySetup['nameTempl']+'_drv'            
+            cntrlDrv= cntrlCrv (name=cntrlName,obj=aux,icone='grp')            
             cntrlName = displaySetup['nameTempl']
-            cntrl= cntrlCrv (name=cntrlName,obj=aux,**displaySetup)
+            cntrl= cntrlCrv (name=cntrlName,obj=cntrlDrv, connType='connection',**displaySetup)
             if self.flipAxis:
+                cntrlDrv.getParent().scaleX.set(-1)
                 cntrl.getParent().scaleX.set(-1)
             else:
+                cntrlDrv.getParent().scaleX.set(1)
                 cntrl.getParent().scaleX.set(1) 
-            pm.parentConstraint (cntrl,aux,mo=True)           
+            pm.parentConstraint (cntrlDrv,aux,mo=True)           
             self.cntrlList.append (cntrl)
+            pm.parent (cntrlDrv.getParent(), cntrlAllDrv)
             pm.parent (cntrl.getParent(), self.cntrlAll)
+
             pm.parent (grp,aux, self.browMoveall)
         
      
-x=EyeBrow(name='L_brow')   
+x=EyeBrow(name='L_brow', mesh='corpo1')   
 x.getGuideFromScene()
 #x.doGuide()
 print x.guideMoveall
-y=EyeBrow(name='R_brow', flipAxis=True)
+y=EyeBrow(name='R_brow',mesh='corpo1', flipAxis=True)
 #y.getGuideFromScene()
 
 y.mirrorConnectGuide(x)
-x.doRig(mesh='corpo1')
-y.doRig(mesh='corpo1')
+x.doRig()
+y.doRig()

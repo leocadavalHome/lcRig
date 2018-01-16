@@ -442,6 +442,9 @@ class Limb():
         ori = orientMatrix(CD, normal, C, self.axis)       
         pm.xform (self.ikCntrl.getParent(), m=ori, ws=True)
         ikH[0].setParent(self.ikCntrl)
+        ikH[0].translate.lock()
+        ikH[0].rotate.lock()
+        
         self.ikCntrl.addAttr ('pin', at='float',min=0, max=1,dv=0, k=1)
         self.ikCntrl.addAttr ('bias', at='float',min=-0.9, max=0.9, k=1)
         self.ikCntrl.addAttr ('autoStretch', at='float',min=0, max=1,dv=1, k=1)
@@ -468,7 +471,9 @@ class Limb():
         
         pm.xform (self.poleVec.getParent() , t=Pole) 
         pm.xform (self.poleVec.getParent() , ro=(0,0,0)) 
-        pm.poleVectorConstraint (self.poleVec, ikH[0])
+        poleCnst = pm.poleVectorConstraint (self.poleVec, ikH[0])
+        
+        
         pm.parent (self.midCntrl.getParent(), self.endCntrl)
         pm.parent (self.endCntrl.getParent(), self.moveAll1Cntrl)
         pm.parent (self.moveAll1Cntrl.getParent(), self.poleVec.getParent(), self.ikCntrl.getParent(), self.moveall)
@@ -496,7 +501,30 @@ class Limb():
         pm.xform (startGrp , t=p1, ws=True)
         pm.parent (startGrp,self.endCntrl)
         
-        ##NODE TREE#######               
+        ##NODE TREE####### 
+        #cria um blend entre uso de poleVector ou so twist
+        poleBlendColor= pm.createNode('blendColors', n='poleVecBlend')
+        poleAdd = pm.createNode('addDoubleLinear',n='PoleAdd')
+        poleCond = pm.createNode('condition', n='poleCond')
+        poleCnst.constraintTranslate >> poleBlendColor.color1
+        poleBlendColor.color2.set(0,0,0)
+        #poleCnst.constraintTranslateX // ikH[0].poleVectorX
+        #poleCnst.constraintTranslateY // ikH[0].poleVectorY
+        #poleCnst.constraintTranslateZ // ikH[0].poleVectorZ
+        poleBlendColor.outputR >> ikH[0].poleVectorX
+        poleBlendColor.outputG >> ikH[0].poleVectorY
+        poleBlendColor.outputB >> ikH[0].poleVectorZ
+        self.moveall.addAttr ('poleVec', at='float', k=1, dv=0, max=1, min=0)
+        self.moveall.poleVec >> poleAdd.input1
+        self.ikCntrl.pin >> poleAdd.input2
+        poleAdd.output >> poleCond.firstTerm
+        poleCond.secondTerm.set(0)
+        poleCond.operation.set(2)
+        poleCond.colorIfFalseR.set(0)
+        poleCond.colorIfTrueR.set(1)
+        poleCond.outColorR  >> poleBlendColor.blender
+        poleCond.outColorR >> self.poleVec.visibility 
+              
         #Pin
         p5 = pm.xform (self.poleVec.getParent(), q=True, t=True, ws=True)
         E=om.MVector (p5)
@@ -1158,8 +1186,8 @@ class Foot:
         self.footDict['toLimbCntrlSetup'] = {'nameTempl':self.name+'ToLimb', 'icone':'bola', 'size':0.5, 'color':(1,1,0)}
         self.footDict['toeCntrlSetup'] = {'nameTempl':self.name+'Toe', 'icone':'circuloX', 'size':1.0, 'color':(1,1,0)}
 
-        self.footDict['ankleFkCntrlSetup'] = {'nameTempl':self.name+'TnkleFk', 'icone':'cubo', 'size':1.0, 'color':(0,1,0)}
-        self.footDict['toeFkCntrlSetup'] = {'nameTempl':self.name+'ToeFk', 'icone':'cubo', 'size':1.0, 'color':(0,1,0)}
+        self.footDict['ankleFkCntrlSetup'] = {'nameTempl':self.name+'TnkleFk', 'icone':'grp', 'size':1.0, 'color':(0,1,0)}
+        self.footDict['toeFkCntrlSetup'] = {'nameTempl':self.name+'ToeFk', 'icone':'circuloX', 'size':1.0, 'color':(0,1,0)}
 
         self.footDict['moveallGuideSetup']={'nameTempl':self.name+'MoveAll', 'size':1.8,'color':(1,1,0) }    
         self.footDict['centerGuideSetup'] = {'nameTempl':self.name+'Center', 'size':2,'color':(1,1,0) }    
@@ -1520,25 +1548,32 @@ class Foot:
         pm.setKeyframe(animUA, float=float(0), value=float(0), itt='Linear',ott='Linear')
         pm.setKeyframe(animUA, float=float(2.5), value=float(120), itt='Linear',ott='Linear')
         rollCntrl.translateZ >> animUA.input
-        animUA.output >> outCntrl.getParent().rotateX
+        #inverte se for mirror pq o controle tem 
+        if self.flipAxis:
+            animUA.output >> inCntrl.getParent().rotateX
+        else:
+            animUA.output >> outCntrl.getParent().rotateX
         
         animUA=pm.createNode('animCurveUA')
         pm.setKeyframe(animUA, float=float(0), value=float(0), itt='Linear',ott='Linear')
         pm.setKeyframe(animUA, float=float(-2.5), value=float(-120), itt='Linear',ott='Linear')
         rollCntrl.translateZ >> animUA.input
-        animUA.output >> inCntrl.getParent().rotateX
+        if self.flipAxis:
+            animUA.output >> outCntrl.getParent().rotateX
+        else:
+            animUA.output >> inCntrl.getParent().rotateX
 
         #controles fk
         displaySetup= self.footDict['ankleFkCntrlSetup'].copy()
         cntrlName = displaySetup['nameTempl']
-        joint1FkCntrl=cntrlCrv(name=cntrlName,obj=j1,connType='parentConstraint', **displaySetup)
+        self.ankleFkCntrl=cntrlCrv(name=cntrlName,obj=j1,connType='parentConstraint', **displaySetup)
 
         displaySetup= self.footDict['toeFkCntrlSetup'].copy()
         cntrlName = displaySetup['nameTempl']
-        joint2FkCntrl=cntrlCrv(name=cntrlName,obj=j2,connType='orientConstraint', **displaySetup)
+        self.toeFkCntrl=cntrlCrv(name=cntrlName,obj=j2,connType='orientConstraint', **displaySetup)
         
-        joint2FkCntrl.getParent().setParent(joint1FkCntrl)
-        joint1FkCntrl.getParent().setParent(self.moveall) 
+        self.toeFkCntrl.getParent().setParent(self.ankleFkCntrl)
+        self.ankleFkCntrl.getParent().setParent(self.moveall) 
         
         #node tree ikfk Blend
         self.moveall.addAttr ('ikfk',at='float', min=0, max=1,dv=1,k=1)
@@ -1563,7 +1598,7 @@ class Foot:
         ikfkVisCond2.operation.set (4)
         ikfkVisCond2.colorIfTrueR.set (1)
         ikfkVisCond2.colorIfFalseR.set (0)
-        ikfkVisCond2.outColorR >> joint1FkCntrl.getParent().visibility
+        ikfkVisCond2.outColorR >> self.ankleFkCntrl.getParent().visibility
         parCnstr = j1.connections (type='parentConstraint')[0] #descobre constraint
         weightAttr = parCnstr.target.connections(p=True, t='parentConstraint') #descobre parametros
         self.moveall.ikfk >> weightAttr[0]
