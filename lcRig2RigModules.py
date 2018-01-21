@@ -989,8 +989,6 @@ class Finger:
 
 
         pm.parent (fingerJnts[0],cntrl0.getParent(),self.moveall)
-        
-        
 
 
 class Hand:
@@ -1026,11 +1024,11 @@ class Hand:
         self.handDict={'name':name, 'axis':axis, 'flipAxis':flipAxis, 'folds':folds, 'fingerNum':fingerNum}
         self.handDict['fingers']={}
         self.handDict['guideDict']={'moveall':[0,0,0]}
-        self.handDict['fingerNames']=['Pink','Ring','Middle','Index','Thumb']
+        self.handDict['fingerNames']=['Thumb','Index','Middle','Ring', 'Pink', 'Other', 'Other1']
         for i in range(fingerNum):
             fingerName=self.name+self.handDict['fingerNames'][i]#IMPLEMENTAR nomes dos dedos            
             self.handDict['fingers']['finger'+str(i+1)] = {'name':fingerName,
-                                                'fingerGuideDict':{'moveall':[0,0,(((fingerNum/2)*-.3)+(i*.3))],'palm':[0,0,0],'base':[1,0,0],'tip':[2,0,0], 'fold1':[0,0.05,0],'fold2':[0,0,0]},
+                                                'fingerGuideDict':{'moveall':[0,0,(((fingerNum/2)*.3)-(i*.3))],'palm':[0,0,0],'base':[1,0,0],'tip':[2,0,0], 'fold1':[0,0.05,0],'fold2':[0,0,0]},
                                                 'instance':None
                                                 }
         self.handDict.update(kwargs)
@@ -1156,12 +1154,13 @@ class Foot:
     #guides com restricao de rotacao
     #Dedos do pe
     
-    def __init__(self,name='foot',flipAxis=False, axis='X',**kwargs):
+    def __init__(self,name='foot',flipAxis=False, axis='X', folds=2, fingerNum=0, **kwargs):
     
         self.name=name
         self.flipAxis=flipAxis
         self.axis=axis
-        
+        self.folds=folds
+        self.fingerNum=fingerNum
         self.guideMoveall=None
         
         self.guideSulfix='_guide'
@@ -1202,12 +1201,24 @@ class Foot:
         self.footDict['slideGuideSetup'] = {'nameTempl':self.name+'Slide', 'size':0.4, 'color':(1,0,0)}
         self.footDict['jointGuideSetup'] = {'nameTempl':self.name+'Joint', 'size':0.5, 'color':(1,1,0)}
         self.footDict['toeGuideSetup'] = {'nameTempl':self.name+'Toe', 'size':1.0, 'color':(1,1,0)}
-    
+
+        self.footDict['fingers']={}
+        self.footDict['fingerNames']=['Thumb','Index','Middle','Ring', 'Pink', 'Other', 'Other1']
+   
         self.footDict['ankleJntSetup'] = {'nameTempl':self.name+'Ankle', 'icone':'Bone', 'size':1.0}
         self.footDict['toeJntSetup'] = {'nameTempl':self.name+'Toe', 'icone':'Bone', 'size':1.0}
         self.footDict['guideDict'] = {}
         self.footGuideDict = {'moveall':[0,0,0],'center':[0,0,0],'tip':[3,0,0],'heel':[-1,0,0],'ankle':[0,1,0],'ball':[2,0.5,0],'in':[2,0,-1],'out':[2,0,1]}
+
+        for i in range(fingerNum):
+            fingerName=self.name+self.footDict['fingerNames'][i]#IMPLEMENTAR nomes dos dedos            
+            self.footDict['fingers']['finger'+str(i+1)] = {'name':fingerName,
+                                                'fingerGuideDict':{'moveall':[0,0,(((fingerNum/2)*1)-(i*.3))],'palm':[0,0,0],'base':[.5,0,0],'tip':[1,0,0], 'fold1':[0,0.05,0],'fold2':[0,0,0]},
+                                                'instance':None  }
         self.footDict.update(kwargs) 
+        for finger in self.footDict['fingers']:                                                       
+            f=Finger(name=self.footDict['fingers'][finger]['name'],axis=self.axis,flipAxis=self.flipAxis,folds=self.folds)                                 
+            self.footDict['fingers'][finger]['instance'] = f
         self.footGuideDict.update(self.footDict['guideDict']) 
         self.footDict['guideDict']=self.footGuideDict.copy()
                        
@@ -1284,6 +1295,12 @@ class Foot:
         self.ankleGuide.setParent (self.centerGuide)
 
         pm.parent (self.centerGuideGrp , self.tipGuide,self.heelGuide, self.guideMoveall)
+
+        for finger in self.footDict['fingers']:                                                                                  
+            f = self.footDict['fingers'][finger]['instance']
+            dict = self.footDict['fingers'][finger]['fingerGuideDict']
+            f.doGuide(**dict)
+            pm.parent (f.guideMoveall,self.guideMoveall)
         
         self.guideMoveall.translate.set(self.footGuideDict['moveall'])
 
@@ -1314,6 +1331,9 @@ class Foot:
         
         guideName=self.footDict['outGuideSetup']['nameTempl']+self.guideSulfix
         self.outGuide=pm.PyNode(guideName)
+
+        for finger in self.footDict['fingers']:                                                                                  
+            self.footDict['fingers'][finger]['instance'].getGuideFromScene()
         
 
     def mirrorConnectGuide(self,foot):
@@ -1363,6 +1383,30 @@ class Foot:
         foot.outGuide.translate >>  self.outGuide.translate
         foot.outGuide.rotate >>  self.outGuide.rotate
         foot.outGuide.scale >>  self.outGuide.scale
+
+        for a, b in zip(self.footDict['fingers'], foot.footDict['fingers']):
+            f_mirror = self.footDict['fingers'][a]['instance']   
+            f_origin = foot.footDict['fingers'][b]['instance']  
+
+            f_origin.guideMoveall.translate >> f_mirror.guideMoveall.translate
+            f_origin.guideMoveall.rotate >> f_mirror.guideMoveall.rotate
+            f_origin.guideMoveall.scale >> f_mirror.guideMoveall.scale
+            f_origin.palmGuide.translate >> f_mirror.palmGuide.translate
+            f_origin.palmGuide.rotate >> f_mirror.palmGuide.rotate
+            f_origin.palmGuide.scale >> f_mirror.palmGuide.scale
+            f_origin.baseGuide.translate >> f_mirror.baseGuide.translate
+            f_origin.baseGuide.rotate >> f_mirror.baseGuide.rotate
+            f_origin.baseGuide.scale >> f_mirror.baseGuide.scale
+            f_origin.tipGuide.translate >> f_mirror.tipGuide.translate
+            f_origin.tipGuide.rotate >> f_mirror.tipGuide.rotate
+            f_origin.tipGuide.scale >> f_mirror.tipGuide.scale
+            f_origin.fold1Guide.translate >> f_mirror.fold1Guide.translate
+            f_origin.fold1Guide.rotate >> f_mirror.fold1Guide.rotate
+            f_origin.fold1Guide.scale >> f_mirror.fold1Guide.scale
+            if self.folds==2:
+                f_origin.fold2Guide.translate >> f_mirror.fold2Guide.translate
+                f_origin.fold2Guide.rotate >> f_mirror.fold2Guide.rotate
+                f_origin.fold2Guide.scale >> f_mirror.fold2Guide.scale  
 
         if foot.flipAxis:
             self.flipAxis=False
@@ -1603,6 +1647,13 @@ class Foot:
         weightAttr = parCnstr.target.connections(p=True, t='parentConstraint') #descobre parametros
         self.moveall.ikfk >> weightAttr[0]
         ikfkRev.outputX >> weightAttr[1]
+
+        for finger in self.footDict['fingers']:                                                                                  
+            f = self.footDict['fingers'][finger]['instance']
+            f.flipAxis = self.flipAxis
+            dict=self.footDict['fingers'][finger]['fingerGuideDict']
+            f.doRig()
+            pm.parent (f.moveall, self.moveall)
             
         #IMPLEMENTAR guardar a posicao dos guides
                 
@@ -1639,25 +1690,25 @@ class Spine:
         #dicionario q determina a aparencia dos controles
         self.spineDict={'name':name, 'axis':axis, 'flipAxis':flipAxis}
         self.spineDict['moveallSetup']={'nameTempl':self.name+'MoveAll', 'icone':'grp','size':1.8,'color':(1,1,0) }    
-        self.spineDict['hipCntrlSetup'] = {'nameTempl':self.name+'Hip', 'icone':'cog','size':5.5,'color':(0,0,1) }
-        self.spineDict['spineFkCntrlSetup'] = {'nameTempl':self.name+'SpineFk', 'icone':'circuloPontaY','size':4,'color':(0,1,0) }      
-        self.spineDict['startFkCntrlSetup'] = {'nameTempl':self.name+'StartFk', 'icone':'circuloPontaY','size':3.0,'color':(1,1,0)}
-        self.spineDict['midFkOffsetCntrlSetup'] = {'nameTempl':self.name+'MidFkOff', 'icone':'circuloY', 'size':2.5, 'color':(1,1,0) }
-        self.spineDict['midFkCntrlSetup'] = {'nameTempl':self.name+'MidFk', 'icone':'circuloPontaY', 'size':4, 'color':(0,1,0) }
-        self.spineDict['endFkCntrlSetup'] = {'nameTempl':self.name+'EndFk', 'icone':'circuloPontaY', 'size':4, 'color':(0,1,0) }
-        self.spineDict['startIkCntrlSetup'] = {'nameTempl':self.name+'StartIk', 'icone':'circuloPontaY', 'size':4, 'color':(1,0,0)}
-        self.spineDict['midIkCntrlSetup'] = {'nameTempl':self.name+'MidIk', 'icone':'circuloY', 'size':4, 'color':(1,1,0)}
-        self.spineDict['endIkCntrlSetup'] = {'nameTempl':self.name+'EndIk', 'icone':'circuloPontaY', 'size':4, 'color':(1,0,0)}      
+        self.spineDict['hipCntrlSetup'] = {'nameTempl':self.name+'COG', 'icone':'cog','size':5.5,'color':(0,0,1) }
+        self.spineDict['spineFkCntrlSetup'] = {'nameTempl':self.name+'WaistFk', 'icone':'circuloPontaY','size':4,'color':(0,1,0) }      
+        self.spineDict['startFkCntrlSetup'] = {'nameTempl':self.name+'HipFk', 'icone':'circuloPontaY','size':3.0,'color':(1,1,0)}
+        self.spineDict['midFkOffsetCntrlSetup'] = {'nameTempl':self.name+'AbdomenFkOff', 'icone':'circuloY', 'size':2.5, 'color':(1,1,0) }
+        self.spineDict['midFkCntrlSetup'] = {'nameTempl':self.name+'AbdomenFk', 'icone':'circuloPontaY', 'size':4, 'color':(0,1,0) }
+        self.spineDict['endFkCntrlSetup'] = {'nameTempl':self.name+'ChestFk', 'icone':'circuloPontaY', 'size':4, 'color':(0,1,0) }
+        self.spineDict['startIkCntrlSetup'] = {'nameTempl':self.name+'HipIk', 'icone':'circuloPontaY', 'size':4, 'color':(1,0,0)}
+        self.spineDict['midIkCntrlSetup'] = {'nameTempl':self.name+'AbdomenIk', 'icone':'circuloY', 'size':4, 'color':(1,1,0)}
+        self.spineDict['endIkCntrlSetup'] = {'nameTempl':self.name+'ChestIk', 'icone':'circuloPontaY', 'size':4, 'color':(1,0,0)}      
 
         self.spineDict['moveallGuideSetup']={'nameTempl':self.name+'Moveall','size':1.8,'color':(1,1,0) }    
-        self.spineDict['startGuideSetup'] = {'nameTempl':self.name+'Start', 'size':1,'color':(0,1,0)}
-        self.spineDict['midGuideSetup'] = {'nameTempl':self.name+'Mid',  'size':1, 'color':(0,1,0) }
-        self.spineDict['endGuideSetup'] = {'nameTempl':self.name+'End',  'size':1, 'color':(0,1,0) }
-        self.spineDict['startTipGuideSetup'] = {'nameTempl':self.name+'StartTip', 'size':1,'color':(0,1,0)}
-        self.spineDict['endTipGuideSetup'] = {'nameTempl':self.name+'EndTip',  'size':1, 'color':(0,1,0) }
+        self.spineDict['startGuideSetup'] = {'nameTempl':self.name+'Hip', 'size':1,'color':(0,1,0)}
+        self.spineDict['midGuideSetup'] = {'nameTempl':self.name+'Abdomen',  'size':1, 'color':(0,1,0) }
+        self.spineDict['endGuideSetup'] = {'nameTempl':self.name+'Chest',  'size':1, 'color':(0,1,0) }
+        self.spineDict['startTipGuideSetup'] = {'nameTempl':self.name+'HipTip', 'size':1,'color':(0,1,0)}
+        self.spineDict['endTipGuideSetup'] = {'nameTempl':self.name+'ChestTip',  'size':1, 'color':(0,1,0) }
 
-        self.spineDict['startJntSetup'] = {'nameTempl':self.name+'Start', 'icone':'Bone', 'size':2}
-        self.spineDict['endJntSetup'] = {'nameTempl':self.name+'End', 'icone':'Bone', 'size':2}      
+        self.spineDict['startJntSetup'] = {'nameTempl':self.name+'Hip', 'icone':'Bone', 'size':2}
+        self.spineDict['endJntSetup'] = {'nameTempl':self.name+'Chest', 'icone':'Bone', 'size':2}      
         
         self.spineDict['guideDict'] = {}
         self.spineGuideDict = {'moveall':[0,0,0],'start':[0,0,0],'mid':[0,4,0],'end':[0,8,0], 'startTip':[0,-1,0],'endTip':[0,10,0]}
