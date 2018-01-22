@@ -20,9 +20,9 @@ n.doGuide()
 s=Spine(name='spine')
 s.doGuide()
 
-lclav=Chain(name='L_clavicle', numDiv=2, fkCntrlSetup = {'nameTempl':'L_clavicleChainFk', 'icone':'ponteiroX','size':.8,'color':(0,1,0) })
+lclav=Chain(name='L_clavicle', divNum=2, fkCntrlSetup = {'nameTempl':'L_clavicleChainFk', 'icone':'ponteiroX','size':.8,'color':(0,1,0) })
 lclav.doGuide()
-rclav=Chain(name='R_clavicle', numDiv=2, fkCntrlSetup = {'nameTempl':'R_clavicleChainFk', 'icone':'ponteiroMenosX','size':.8,'color':(0,1,0) })
+rclav=Chain(name='R_clavicle', divNum=2, fkCntrlSetup = {'nameTempl':'R_clavicleChainFk', 'icone':'ponteiroMenosX','size':.8,'color':(0,1,0) })
 rclav.mirrorConnectGuide(lclav)
 
 lleg=Limb(name='L_leg' ,ikCntrlSetup = {'nameTempl':'L_footIk', 'icone':'grp','size':.8,'color':(1,1,0)} )
@@ -62,9 +62,9 @@ n.getGuideFromScene()
 s=Spine(name='spine')
 s.getGuideFromScene()
 
-lclav=Chain(name='L_clavicle', numDiv=2, fkCntrlSetup = {'nameTempl':'L_clavicleFk', 'icone':'circuloX','size':1.2,'color':(0,1,0) })
+lclav=Chain(name='L_clavicle', divNum=2, fkCntrlSetup = {'nameTempl':'L_clavicleFk', 'icone':'circuloX','size':1.2,'color':(0,1,0) })
 lclav.getGuideFromScene()
-rclav=Chain(name='R_clavicle', numDiv=2, fkCntrlSetup = {'nameTempl':'R_clavicleFk', 'icone':'circuloX','size':1.2,'color':(0,1,0) }, flipAxis=True)
+rclav=Chain(name='R_clavicle', divNum=2, fkCntrlSetup = {'nameTempl':'R_clavicleFk', 'icone':'circuloX','size':1.2,'color':(0,1,0) }, flipAxis=True)
 rclav.getGuideFromScene()
 
 lleg=Limb(name='L_leg',ikCntrlSetup = {'nameTempl':'L_footIk', 'icone':'grp','size':.8,'color':(1,1,0)}  )

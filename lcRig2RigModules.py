@@ -1025,6 +1025,8 @@ class Hand:
         self.handDict['fingers']={}
         self.handDict['guideDict']={'moveall':[0,0,0]}
         self.handDict['fingerNames']=['Thumb','Index','Middle','Ring', 'Pink', 'Other', 'Other1']
+#       self.handDict['fingerNames']=[ 'Pink','Ring','Middle','Index', 'Thumb']
+
         for i in range(fingerNum):
             fingerName=self.name+self.handDict['fingerNames'][i]#IMPLEMENTAR nomes dos dedos            
             self.handDict['fingers']['finger'+str(i+1)] = {'name':fingerName,
@@ -1072,6 +1074,9 @@ class Hand:
         if not hand.guideMoveall:
             hand.doGuide()
 
+        if pm.objExists(self.name+'MirrorGuide_grp'):
+            pm.delete (self.name+'MirrorGuide_grp')
+
         self.mirrorGuide= pm.group (em=True, n=self.name+'MirrorGuide_grp') 
         if not pm.objExists('GUIDES'):
             pm.group ( self.name+'MirrorGuide_grp', n='GUIDES' )
@@ -1110,10 +1115,10 @@ class Hand:
                 f_origin.fold2Guide.rotate >> f_mirror.fold2Guide.rotate
                 f_origin.fold2Guide.scale >> f_mirror.fold2Guide.scale  
                                                       
-        if hand.flipAxis:
-            self.flipAxis=False
-        else:
-            self.flipAxis=True
+        #if hand.flipAxis:
+        #    self.flipAxis=False
+        #else:
+        #    self.flipAxis=True
 
 
     def doRig(self, **kwargs):
@@ -1211,10 +1216,13 @@ class Foot:
         self.footGuideDict = {'moveall':[0,0,0],'center':[0,0,0],'tip':[3,0,0],'heel':[-1,0,0],'ankle':[0,1,0],'ball':[2,0.5,0],'in':[2,0,-1],'out':[2,0,1]}
 
         for i in range(fingerNum):
-            fingerName=self.name+self.footDict['fingerNames'][i]#IMPLEMENTAR nomes dos dedos            
+            fingerName=self.name+self.footDict['fingerNames'][i]#IMPLEMENTAR nomes dos dedos
+            step = 1.8/fingerNum
+            ini = 0.9 - step/2.0     
             self.footDict['fingers']['finger'+str(i+1)] = {'name':fingerName,
-                                                'fingerGuideDict':{'moveall':[0,0,(((fingerNum/2)*1)-(i*.3))],'palm':[0,0,0],'base':[.5,0,0],'tip':[1,0,0], 'fold1':[0,0.05,0],'fold2':[0,0,0]},
-                                                'instance':None  }
+                                                'fingerGuideDict':{'moveall':[2,0,ini-(i*step)],'palm':[0,0,0],'base':[.3,0,0],'tip':[.8,0,0], 'fold1':[0,0.05,0],'fold2':[0,0,0]},
+                                                'instance':None,
+                                                'isHeelFinger':False}
         self.footDict.update(kwargs) 
         for finger in self.footDict['fingers']:                                                       
             f=Finger(name=self.footDict['fingers'][finger]['name'],axis=self.axis,flipAxis=self.flipAxis,folds=self.folds)                                 
@@ -1283,7 +1291,13 @@ class Foot:
         self.outGuide.translate.set(self.footGuideDict['out'])
         self.outGuide.localScale.set(.2,.2,.2)
         self.outGuide.displayHandle.set(1)
-        
+
+        for finger in self.footDict['fingers']:                                                                                  
+            f = self.footDict['fingers'][finger]['instance']
+            dict = self.footDict['fingers'][finger]['fingerGuideDict']
+            f.doGuide(**dict)
+            pm.parent (f.guideMoveall,self.tipGuide)
+                    
         pm.pointConstraint (self.tipGuide,self.heelGuide, self.centerGuideGrp)
         pm.pointConstraint (self.tipGuide, self.centerGuideGrp, e=True, w=0.25)
         pm.pointConstraint (self.heelGuide, self.centerGuideGrp, e=True, w=0.75)
@@ -1296,11 +1310,6 @@ class Foot:
 
         pm.parent (self.centerGuideGrp , self.tipGuide,self.heelGuide, self.guideMoveall)
 
-        for finger in self.footDict['fingers']:                                                                                  
-            f = self.footDict['fingers'][finger]['instance']
-            dict = self.footDict['fingers'][finger]['fingerGuideDict']
-            f.doGuide(**dict)
-            pm.parent (f.guideMoveall,self.guideMoveall)
         
         self.guideMoveall.translate.set(self.footGuideDict['moveall'])
 
@@ -1341,6 +1350,9 @@ class Foot:
             self.doGuide()
         if not foot.guideMoveall:
             foot.doGuide()
+
+        if pm.objExists(self.name+'MirrorGuide_grp'):
+            pm.delete (self.name+'MirrorGuide_grp')
 
         self.mirrorGuide= pm.group (em=True, n=self.name+'MirrorGuide_grp') 
         if not pm.objExists('GUIDES'):
@@ -1408,10 +1420,10 @@ class Foot:
                 f_origin.fold2Guide.rotate >> f_mirror.fold2Guide.rotate
                 f_origin.fold2Guide.scale >> f_mirror.fold2Guide.scale  
 
-        if foot.flipAxis:
-            self.flipAxis=False
-        else:
-            self.flipAxis=True
+        #if foot.flipAxis:
+        #    self.flipAxis=False
+        #else:
+        #    self.flipAxis=True
         
                        
     def doRig(self):
@@ -1543,6 +1555,17 @@ class Foot:
         cntrlName = displaySetup['nameTempl']
         rollCntrl=cntrlCrv(name=cntrlName,obj=self.ballGuide, **displaySetup)
         rollCntrl.getParent().translateBy((0,1.5,1))
+
+        for finger in self.footDict['fingers']:                                                                                  
+            f = self.footDict['fingers'][finger]['instance']
+            f.flipAxis = self.flipAxis
+            dict=self.footDict['fingers'][finger]['fingerGuideDict']
+            f.doRig()
+            if self.footDict['fingers'][finger]['isHeelFinger']:
+                pm.parent (f.moveall, j1)
+            else:
+                pm.parent (f.moveall, j2)
+                   
         
         #hierarquia
         pm.parent (ballCntrl.getParent(), toeCntrl.getParent(), heelCntrl)
@@ -1648,12 +1671,6 @@ class Foot:
         self.moveall.ikfk >> weightAttr[0]
         ikfkRev.outputX >> weightAttr[1]
 
-        for finger in self.footDict['fingers']:                                                                                  
-            f = self.footDict['fingers'][finger]['instance']
-            f.flipAxis = self.flipAxis
-            dict=self.footDict['fingers'][finger]['fingerGuideDict']
-            f.doRig()
-            pm.parent (f.moveall, self.moveall)
             
         #IMPLEMENTAR guardar a posicao dos guides
                 
@@ -1807,17 +1824,17 @@ class Spine:
         #cria controles fk com nomes e setagem de display vindas do spineDict
         displaySetup= self.spineDict['hipCntrlSetup'].copy()
         cntrlName = displaySetup['nameTempl'] 
-        self.hipCntrl = cntrlCrv(name=cntrlName , obj=self.startGuide,**displaySetup) 
+        self.cogCntrl = cntrlCrv(name=cntrlName , obj=self.startGuide,**displaySetup) 
 
         displaySetup= self.spineDict['spineFkCntrlSetup'].copy()
         cntrlName = displaySetup['nameTempl'] 
         self.spineFkCntrl = cntrlCrv(name=cntrlName , obj=self.startGuide,**displaySetup) 
-        self.spineFkCntrl.getParent().setParent(self.hipCntrl)
+        self.spineFkCntrl.getParent().setParent(self.cogCntrl)
         
         displaySetup= self.spineDict['startFkCntrlSetup'].copy()
         cntrlName = displaySetup['nameTempl']        
         self.startFkCntrl = cntrlCrv(name=cntrlName, obj=self.startGuide,**displaySetup)
-        self.startFkCntrl.getParent().setParent(self.hipCntrl)
+        self.startFkCntrl.getParent().setParent(self.cogCntrl)
         
         displaySetup= self.spineDict['midFkCntrlSetup'].copy()
         cntrlName = displaySetup['nameTempl']        
@@ -1838,7 +1855,7 @@ class Spine:
         displaySetup= self.spineDict['startIkCntrlSetup'].copy()
         cntrlName = displaySetup['nameTempl']
         self.startIkCntrl = cntrlCrv(name=cntrlName, obj=self.startGuide,**displaySetup)
-        self.startIkCntrl.getParent().setParent(self.hipCntrl)
+        self.startIkCntrl.getParent().setParent(self.cogCntrl)
         
         displaySetup= self.spineDict['midIkCntrlSetup'].copy()
         cntrlName = displaySetup['nameTempl']
@@ -1847,7 +1864,7 @@ class Spine:
         displaySetup= self.spineDict['endIkCntrlSetup'].copy()
         cntrlName = displaySetup['nameTempl']
         self.endIkCntrl = cntrlCrv(name=cntrlName, obj=self.endGuide,**displaySetup)
-        self.endIkCntrl.getParent().setParent(self.hipCntrl)    
+        self.endIkCntrl.getParent().setParent(self.cogCntrl)    
             
         #Cria os joints orientados em X down
         start=pm.xform(self.startGuide,q=True,t=True,ws=True)
@@ -1976,8 +1993,8 @@ class Spine:
         
         
         #e parenteia todo mundo
-        pm.parent (twistExtractor1.extractorGrp, twistExtractor2.extractorGrp, spineRibbon.moveall, self.hipCntrl)
-        pm.parent (self.midIkCntrl.getParent(),self.hipCntrl.getParent(), self.moveall)
+        pm.parent (twistExtractor1.extractorGrp, twistExtractor2.extractorGrp, spineRibbon.moveall, self.cogCntrl)
+        pm.parent (self.midIkCntrl.getParent(),self.cogCntrl.getParent(), self.moveall)
 
 
         #conecta os twist extractors nos twists do ribbon
@@ -2028,7 +2045,7 @@ class Chain:
             name (string): nome do novo limb            
             flipAxis (boolean): se o eixo eh flipado ao longo do bone
             axis (string:'X','Y' ou 'Z'): eixo ao longo do bone
-            numDiv (int): numero de joints da cadeia
+            divNum (int): numero de joints da cadeia
                              
     """  
     ## IMPLEMENTAR:
@@ -2036,11 +2053,11 @@ class Chain:
     #  talvez conexoes diretas dos controles?
     #  algum tipo de controle ik para a cadeia
         
-    def __init__(self, name='chain', flipAxis=False, numDiv=2, axis='X', **kwargs):
+    def __init__(self, name='chain', flipAxis=False, divNum=2, axis='X', **kwargs):
         self.axis=axis
         self.flipAxis=flipAxis
         self.name=name 
-        self.numDiv=numDiv
+        self.divNum=divNum
         
         self.guideList=[]
         self.guideMoveall=None
@@ -2053,7 +2070,7 @@ class Chain:
         grpSulfix='_grp'
         
         self.chainGuideDict={'moveall':[0,0,0]}
-        for i in range (self.numDiv):
+        for i in range (self.divNum):
             self.chainGuideDict['guide'+str(i+1)]=[0+i,0,0]
         #parametros de aparencia dos controles
         self.chainDict={'name':name, 'axis':axis, 'flipAxis':flipAxis}
@@ -2202,7 +2219,7 @@ class Chain:
         
         # desenha o ultimo joint (ou o unico)
         pm.select(cl=True)
-        if self.numDiv==1:
+        if self.divNum==1:
             jntName=self.chainDict['jntSetup']['nameTempl']+self.jntSulfix  
         else:
             jntName=self.chainDict['jntSetup']['nameTempl']+self.tipJxtSulfix      

@@ -489,29 +489,29 @@ class EyeBrow:
             pm.parent (grp,aux, self.browMoveall)
         
 #implementar colocar os grupos dentro do FAcial, cntrls            
-x= Tweaks(name='hairTweaks', num=3, type=None, cntrlSetup = {'nameTempl':'lipTweaks', 'icone':'circuloX','size':.5,'color':(1,1,0) })
-x.guideDict 
-x.getGuideFromScene()     
+#x= Tweaks(name='hairTweaks', num=3, type=None, cntrlSetup = {'nameTempl':'lipTweaks', 'icone':'circuloX','size':.5,'color':(1,1,0) })
+#x.guideDict 
+#x.getGuideFromScene()     
 #x.doGuide() 
-x.doRig()
+#x.doRig()
       
-j=Jaw(name='jaw')
-j.doGuide()
-j.getGuideFromScene()
-j.doRig() 
+#j=Jaw(name='jaw')
+#j.doGuide()
+#j.getGuideFromScene()
+#j.doRig() 
  
-m= MouthCorners(mesh='corpo1', tgtMesh='BSMesh') 
-m.getGuideFromScene() 
+#m= MouthCorners(mesh='corpo1', tgtMesh='BSMesh') 
+#m.getGuideFromScene() 
 #m.splitShapes()
 #m.selToBsDict()
-m.doRig({'L_up_narrow': u'L_Corner_Up___Nar', 'L_down_narrow': u'L_Corner_Down___N', 'L_up_wide': u'L_Corner_Up___Wid', 'R_down_wide': u'R_Corner_Down___W', 'R_up_narrow': u'R_Corner_Up___Nar', 'R_wide': u'R_Wide', 'R_down': u'R_Corner_Down', 'R_narrow': u'R_Narrow', 'R_up_wide': u'R_Corner_Up___Wid', 'R_down_narrow': u'R_Corner_Down___N', 'L_narrow': u'L_Narrow', 'L_down_wide': u'L_Corner_Down___W', 'L_up': u'L_Corner_Up', 'L_wide': u'L_Wide', 'L_down': u'L_Corner_Down', 'R_up': u'R_Corner_Up'})
+#m.doRig({'L_up_narrow': u'L_Corner_Up___Nar', 'L_down_narrow': u'L_Corner_Down___N', 'L_up_wide': u'L_Corner_Up___Wid', 'R_down_wide': u'R_Corner_Down___W', 'R_up_narrow': u'R_Corner_Up___Nar', 'R_wide': u'R_Wide', 'R_down': u'R_Corner_Down', 'R_narrow': u'R_Narrow', 'R_up_wide': u'R_Corner_Up___Wid', 'R_down_narrow': u'R_Corner_Down___N', 'L_narrow': u'L_Narrow', 'L_down_wide': u'L_Corner_Down___W', 'L_up': u'L_Corner_Up', 'L_wide': u'L_Wide', 'L_down': u'L_Corner_Down', 'R_up': u'R_Corner_Up'})
 
-x=EyeBrow(name='L_brow', mesh='corpo1')   
-x.getGuideFromScene()
+#x=EyeBrow(name='L_brow', mesh='corpo1')   
+#x.getGuideFromScene()
 #x.doGuide()
-print x.guideMoveall
-y=EyeBrow(name='R_brow',mesh='corpo1', flipAxis=True)
+#print x.guideMoveall
+#y=EyeBrow(name='R_brow',mesh='corpo1', flipAxis=True)
 #y.getGuideFromScene()
-y.mirrorConnectGuide(x)
-x.doRig()
-y.doRig()
+#y.mirrorConnectGuide(x)
+#x.doRig()
+#y.doRig()
