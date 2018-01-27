@@ -29,7 +29,7 @@ class Tweaks:
             guide.translate.set ( self.guideDict[self.name+str(i+1)] )
             self.guideList.append (guide)
             guide.setParent (self.guideMoveall)
-
+            
     def getGuideFromScene(self):
         self.guideMoveall = pm.PyNode (self.name+'Moveall_guide')
         
@@ -37,7 +37,37 @@ class Tweaks:
         for i in range (self.num):
             guide = pm.PyNode (self.name+str(i+1))
             self.guideList.append (guide)
-    
+
+    def mirrorConnectGuide(self, tweak):
+        if not self.guideMoveall:
+            self.doGuide()        
+        if not tweak.guideMoveall:
+            tweak.doGuide()
+
+        if pm.objExists(self.name+'MirrorGuide_grp'):
+            pm.delete (self.name+'MirrorGuide_grp')
+
+        self.mirrorGuide= pm.group (em=True, n=self.name+'MirrorGuide_grp') 
+        #if not pm.objExists('GUIDES'):
+        #    pm.group ( self.name+'MirrorGuide_grp', n='GUIDES' )
+        #else:
+        #    pm.parent ( self.name+'MirrorGuide_grp', 'GUIDES')
+                        
+               
+        self.guideMoveall.setParent (self.mirrorGuide)
+        self.mirrorGuide.scaleX.set (-1)
+        self.mirrorGuide.template.set (1)   
+        
+        tweak.guideMoveall.translate >>  self.guideMoveall.translate
+        tweak.guideMoveall.rotate >>  self.guideMoveall.rotate
+        tweak.guideMoveall.scale >>  self.guideMoveall.scale
+
+        for i in range (self.num):
+            tweak.guideList[i].translate >>  self.guideList[i].translate
+            tweak.guideList[i].rotate >>  self.guideList[i].rotate
+            tweak.guideList[i].scale >>  self.guideList[i].scale
+
+
     def doRig(self):
         if not self.guideMoveall:
             self.doGuide()
