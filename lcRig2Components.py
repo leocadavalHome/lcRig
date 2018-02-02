@@ -464,8 +464,11 @@ def cntrlCrv(name='cntrl', obj=None, connType=None,offsets=0, **kwargs):
 
 def createSpc (driver, name, type=None):
 	drvGrp = pm.group (empty=True, n=name+'_drv')
+	pos=pm.xform (driver, q=True,ws=True,t=True)
+	pm.xform (drvGrp, t=pos, ws=True)
+
 	if driver:
-		pm.parentConstraint (driver, drvGrp)
+		pm.parentConstraint (driver, drvGrp, mo=True)
 	spcGrp = pm.group (empty=True, n=name+'_spc')
 	pm.parent (spcGrp, drvGrp) 
 	if not pm.objExists('spaces'):
@@ -552,7 +555,7 @@ class twistExtractor:
             twistJntIn: joint a ser calculado
     """  
     
-    def __init__(self, twistJntIn, conn='parentConstraint' ):
+    def __init__(self, twistJntIn, conn='parentConstraint', flipAxis=False):
         
         self.extractor = None
         self.axis= 'X' #hard coding X como eixo. Aparentemente so ele funciona
@@ -620,7 +623,10 @@ class twistExtractor:
         # multiplica por 2 o valor de rot do locator
         pm.addAttr (extractorLoc, ln='extractTwist', at='double', k=1)
         multi = pm.createNode ('multDoubleLinear')
-        multi.input2.set(2)
+        if flipAxis:
+            multi.input2.set(-2)            
+        else:
+            multi.input2.set(2)
         extractorLoc.attr('rotate'+self.axis) >> multi.input1
         multi.output >> extractorLoc.extractTwist
         self.extractor = extractorLoc
@@ -641,9 +647,7 @@ class RibbonBezier:
     def __init__( self, **kwargs ):
         
         self.ribbonDict = {}
-        
-        
-                    
+                           
         self.ribbonDict['size']=kwargs.pop('size', 10)
         self.ribbonDict['name']=kwargs.pop('name','ribbonBezier')
         self.ribbonDict['numJnts']=kwargs.pop('numJnts',10)
@@ -689,7 +693,8 @@ class RibbonBezier:
         noMoveSpace.translate.set(self.size*-0.5,0,0)    
         noMoveBend1 = pm.nurbsPlane ( p=(self.size*-0.25,0,0), ax=(0,0,1), w=self.size*0.5, lr = .1 , d = 3, u =5, v =1)        
         noMoveBend2 = pm.nurbsPlane ( p=(self.size*0.25,0,0), ax=(0,0,1), w=self.size*0.5, lr = .1 , d = 3, u =5, v =1)
-        noMoveCrvJnt = pm.curve ( bezier=True, d=3, p=[(self.size*-0.5,0,0),(self.size*-0.4,0,0),(self.size*-0.1,0,0),(0,0,0),(self.size*0.1,0,0),(self.size*0.4,0,0),(self.size*0.5,0,0)], k=[0,0,0,1,1,1,2,2,2])        
+        #noMoveCrvJnt = pm.curve ( bezier=True, d=3, p=[(self.size*-0.5,0,0),(self.size*-0.4,0,0),(self.size*-0.1,0,0),(0,0,0),(self.size*0.1,0,0),(self.size*0.4,0,0),(self.size*0.5,0,0)], k=[0,0,0,1,1,1,2,2,2])        
+        noMoveCrvJnt = pm.curve ( bezier=True, d=3, p=[(self.size*-0.50,0,0),(self.size*-0.499,0,0),(self.size*-0.496,0,0),(self.size*-0.495,0,0),(self.size*-0.395,0,0),(self.size*-0.10,0,0),(0,0,0),(self.size*0.10,0,0),(self.size*0.395,0,0),(self.size*0.495,0,0),(self.size*0.496,0,0),(self.size*0.499,0,0),(self.size*0.50,0,0)],k=[0,0,0,1,2,3,4,5,6,7,8,9,10,10,10])
         
         #Deformers das superficies noMove
         twist1 = pm.nonLinear(noMoveBend1[0],  type='twist')         #twist das superficies noMove
@@ -717,7 +722,7 @@ class RibbonBezier:
         
         ##Cntrls                
         for i in range (0, 7):
-            anchor = pm.cluster (noMoveCrvJnt.name()+'.cv['+str(i)+']')
+            anchor = pm.cluster (noMoveCrvJnt.name()+'.cv['+str(i+3)+']')
             clsHandle = anchor [1]
             anchorGrp = pm.group (em=True, n='clusterGrp'+str (i))
             anchorDrn = pm.group (em=True, n='clusterDrn'+str (i),p=anchorGrp)
@@ -760,6 +765,14 @@ class RibbonBezier:
             loc.rotate >> anchorDrn.rotate
             cntrlList.append(cntrl)
             locList.append (loc)        
+
+        #workaround do flip do inicio do wire(adicao de mais pontos)
+        startCls = pm.cluster (noMoveCrvJnt.name()+'.cv[0:2]')
+        endCls = pm.cluster (noMoveCrvJnt.name()+'.cv[10:14]')
+        
+        pm.parent (startCls, anchorList[0])
+        pm.parent (endCls, anchorList[6])
+        
         cntrlsSpace.addAttr ('cntrlsVis', at='double', dv=1, k=False, h=True)
         cntrlsSpace.addAttr ('extraCntrlsVis', at='double', dv=0, k=False, h=True)            
         cntrlList[0].addAttr ('twist', at='double', dv=0, k=True)
@@ -1012,14 +1025,14 @@ class RibbonBezier:
         #node tree
         aimBlend1 = pm.createNode('blendTwoAttr')
         aimBlend2 = pm.createNode('blendTwoAttr')
-        ribbonMoveAll.addAttr ('softTang1', at='float', dv=0, max=1, min=0,k=1)
-        ribbonMoveAll.addAttr ('softTang2', at='float', dv=0, max=1, min=0,k=1)
+        ribbonMidCntrl.addAttr ('softTang1', at='float', dv=0, max=1, min=0,k=1)
+        ribbonMidCntrl.addAttr ('softTang2', at='float', dv=0, max=1, min=0,k=1)
         aimBlend1.input[0].set(0)
         mid1AimGrp.rotateY >> aimBlend1.input[1]
         aimBlend2.input[0].set(0)
         mid2AimGrp.rotateY >> aimBlend2.input[1]
-        ribbonMoveAll.softTang1 >> aimBlend1.attributesBlender
-        ribbonMoveAll.softTang2 >> aimBlend2.attributesBlender
+        ribbonMidCntrl.softTang1 >> aimBlend1.attributesBlender
+        ribbonMidCntrl.softTang2 >> aimBlend2.attributesBlender
         aimBlend1.output >> mid1SpcSwithGrp.rotateY
         aimBlend2.output >> mid2SpcSwithGrp.rotateY
         
@@ -1572,7 +1585,7 @@ class RibbonBezierSimple:
         self.ribbonDict['noMoveSetup']={'nameTempl':self.name+'NoMove'}    
 
         self.ribbonDict['cntrlSetup']={'nameTempl':self.name+'Pos','icone':'grp','size':0.6,'color':(0,0,1)}       
-        self.ribbonDict['midCntrlSetup']={'nameTempl':self.name+'Pos','icone':'circuloX','size':1,'color':(0,.6,1)}        
+        self.ribbonDict['midCntrlSetup']={'nameTempl':self.name+'Pos','icone':'grp','size':1,'color':(0,.6,1)}        
         self.ribbonDict['cntrlTangSetup']={'nameTempl':self.name+'Tang','icone':'bola','size':0.3,'color':(0,1,1)}        
         self.ribbonDict['cntrlExtraSetup']={'nameTempl':self.name+'Extra','icone':'circuloX','size':0.2}        
 
@@ -1598,7 +1611,9 @@ class RibbonBezierSimple:
 
         noMoveSpace.visibility.set(0)
         noMoveBend1 = pm.nurbsPlane ( p=(self.size*0.5,0,0), ax=(0,0,1), w=self.size, lr = 0.1 , d = 3, u =5, v =1)        
-        noMoveCrvJnt = pm.curve ( bezier=True, d=3, p=[(self.size*-0.5,0,0),(self.size*-0.4,0,0),(self.size*-0.1,0,0),(0,0,0),(self.size*0.1,0,0),(self.size*0.4,0,0),(self.size*0.5,0,0)], k=[0,0,0,1,1,1,2,2,2])        
+        #noMoveCrvJnt = pm.curve ( bezier=True, d=3, p=[(self.size*-0.5,0,0),(self.size*-0.4,0,0),(self.size*-0.1,0,0),(0,0,0),(self.size*0.1,0,0),(self.size*0.4,0,0),(self.size*0.5,0,0)], k=[0,0,0,1,1,1,2,2,2])        
+        noMoveCrvJnt = pm.curve ( bezier=True, d=3, p=[(self.size*-0.50,0,0),(self.size*-0.499,0,0),(self.size*-0.496,0,0),(self.size*-0.495,0,0),(self.size*-0.395,0,0),(self.size*-0.10,0,0),(0,0,0),(self.size*0.10,0,0),(self.size*0.395,0,0),(self.size*0.495,0,0),(self.size*0.496,0,0),(self.size*0.499,0,0),(self.size*0.50,0,0)],k=[0,0,0,1,2,3,4,5,6,7,8,9,10,10,10])
+
         noMoveCrvJnt.translate.set(self.size*0.5,0,0) 
         
         #Deformers das superficies noMove
@@ -1622,7 +1637,7 @@ class RibbonBezierSimple:
         
         ##Cntrls                
         for i in range (0, 7):
-            anchor = pm.cluster (noMoveCrvJnt.name()+'.cv['+str(i)+']')
+            anchor = pm.cluster (noMoveCrvJnt.name()+'.cv['+str(i+3)+']')
             clsHandle = anchor [1]
             anchorGrp = pm.group (em=True, n='clusterGrp'+str (i))
             anchorDrn = pm.group (em=True, n='clusterDrn'+str (i),p=anchorGrp)
@@ -1666,6 +1681,12 @@ class RibbonBezierSimple:
             loc.rotate >> anchorDrn.rotate
             cntrlList.append(cntrl)
             locList.append (loc)
+
+        startCls = pm.cluster (noMoveCrvJnt.name()+'.cv[0:2]')
+        endCls = pm.cluster (noMoveCrvJnt.name()+'.cv[10:14]')
+        
+        pm.parent (startCls, anchorList[0])
+        pm.parent (endCls, anchorList[6])
         
         cntrlsSpace.addAttr ('cntrlsVis', at='double', dv=1, k=False, h=True)
         cntrlsSpace.addAttr ('extraCntrlsVis', at='double', dv=0, k=False, h=True)            
@@ -1749,6 +1770,7 @@ class RibbonBezierSimple:
             pm.parent (cntrl1.getParent(),extraCntrlsGrp)
             pm.parent (jnt1, skinJntsGrp)
             pm.parent (foll1, follGrp)       
+
         
         #seta expressoes para so serem avaliadas por demanda             
         pm.expression (s=expre1, ae=False)
@@ -1833,7 +1855,11 @@ class RibbonBezierSimple:
     
         pm.delete (upNPoC, upGrpA , jntNPoC, jntGrpA)
 
-class AimTwistDivider:
+class AimTwistDivider:        startCls = pm.cluster (noMoveCrvJnt.name()+'.cv[0:2]')
+        endCls = pm.cluster (noMoveCrvJnt.name()+'.cv[10:14]')
+        
+        pm.parent (startCls, anchorList[0])
+        pm.parent (endCls, anchorList[6])
     """
         Cria um sistema q orienta o grupo mid segundo a posicao e twist de start e end.
         fazendo a media
