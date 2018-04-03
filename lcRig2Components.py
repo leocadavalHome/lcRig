@@ -104,7 +104,7 @@ def cntrlCrv(name='cntrl', obj=None, connType=None,offsets=0, **kwargs):
     	crv.scale.set(cntrlSize,cntrlSize,cntrlSize) 
         pm.makeIdentity( crv, a = True, t = True, r = True, s = True, n=False )
     elif icone=='dropY':
-        crv=pm.circle(nr=[1,0,0], ch=0,  n=name+"_cntrl")[0]
+        crv=pm.circle(nr=[1,0,0], ch=0,r=1,  n=name+"_cntrl")[0]
         pm.move(0,3,0, crv, r=1)
         pm.makeIdentity(crv, apply=1, t=1)
         pm.move(0,-3,0, crv.scalePivot, crv.rotatePivot, r=1)
@@ -115,7 +115,7 @@ def cntrlCrv(name='cntrl', obj=None, connType=None,offsets=0, **kwargs):
     	crv.scale.set(cntrlSize,cntrlSize,cntrlSize) 
         pm.makeIdentity( crv, a = True, t = True, r = True, s = True, n=False )   
     elif icone=='dropZ':        
-        crv = pm.circle(nr=[0,1,0], ch=0,  n=name+"_cntrl")[0]
+        crv = pm.circle(nr=[0,1,0], ch=0,r=1,  n=name+"_cntrl")[0]
         pm.move(0,0,-3, crv,r=1)
         pm.makeIdentity(crv, apply=1, t=1)
         pm.move(0,0,3, crv.scalePivot, crv.rotatePivot, r=1)
@@ -126,7 +126,7 @@ def cntrlCrv(name='cntrl', obj=None, connType=None,offsets=0, **kwargs):
     	crv.scale.set(cntrlSize,cntrlSize,cntrlSize) 
         pm.makeIdentity( crv, a = True, t = True, r = True, s = True, n=False )   
     elif icone=='dropMenosY':
-        crv=pm.circle(nr=[1,0,0], ch=0,  n=name+"_cntrl")[0]
+        crv=pm.circle(nr=[1,0,0], ch=0,r=1,  n=name+"_cntrl")[0]
         pm.move(0,3,0, crv, r=1)
         pm.makeIdentity(crv, apply=1, t=1)
         pm.move(0,-3,0, crv.scalePivot, crv.rotatePivot, r=1)
@@ -137,7 +137,7 @@ def cntrlCrv(name='cntrl', obj=None, connType=None,offsets=0, **kwargs):
     	crv.scale.set(cntrlSize,cntrlSize*-1,cntrlSize) 
         pm.makeIdentity( crv, a = True, t = True, r = True, s = True, n=False )   
     elif icone=='dropMenosZ':        
-        crv = pm.circle(nr=[0,1,0], ch=0,  n=name+"_cntrl")[0]
+        crv = pm.circle(nr=[0,1,0], ch=0,r=1,  n=name+"_cntrl")[0]
         pm.move(0,0,-3, crv,r=1)
         pm.makeIdentity(crv, apply=1, t=1)
         pm.move(0,0,3, crv.scalePivot, crv.rotatePivot, r=1)
@@ -148,13 +148,13 @@ def cntrlCrv(name='cntrl', obj=None, connType=None,offsets=0, **kwargs):
     	crv.scale.set(cntrlSize,cntrlSize,cntrlSize*-1) 
         pm.makeIdentity( crv, a = True, t = True, r = True, s = True, n=False )   
     elif icone=='circuloPontaY':                
-        tempCrv = pm.circle(n=name+"Aux", nr=[0,1,0], ch=0, s=6)[0]
+        tempCrv = pm.circle(n=name+"Aux", nr=[0,1,0],r=1, ch=0, s=6)[0]
         pm.scale([tempCrv.cv[3], tempCrv.cv[5]],[0.25, 1, 1])
         pm.move(0,0,-0.5, tempCrv.cv[0], tempCrv.cv[2], r=1, ls=1)
         pm.move(0,0,1.25, tempCrv.cv[0:5], r=1, ls=1)
         pm.move(0,0,0.5, tempCrv.cv[1], r=1, ls=1)
         pm.scale(tempCrv.cv[0:5],[0.1, 0.1, 0.1], r=1, p=(0,0,1.25)) 
-        crv = pm.circle(nr=[0,1,0], ch=0, n=name+"_cntrl")[0]
+        crv = pm.circle(nr=[0,1,0], ch=0,r=1, n=name+"_cntrl")[0]
         pm.parent(tempCrv.getShape(), crv, r=1, s=1)
         pm.delete(tempCrv)    
         crv.scale.set(cntrlSize*.5,cntrlSize*.5,cntrlSize*.5)
@@ -217,7 +217,7 @@ def cntrlCrv(name='cntrl', obj=None, connType=None,offsets=0, **kwargs):
         pm.makeIdentity( crv, a = True, t = True, r = True, s = True, n=False )
     
     elif icone == 'pentagonoZ':
-    	controlList = pm.circle(ch=1, n=name+"_cntrl")
+    	controlList = pm.circle(ch=1,r=0.5, n=name+"_cntrl")
     	crv = controlList[0]
     	history = controlList[1]
     	history.degree.set(1)
@@ -513,11 +513,62 @@ def addSpc (target, spaceList, switcher, type='parent', posSpc=None):
     	cond.colorIfFalseR.set(0)     
     	cond.outColor.outColorR >> cns.attr(space+'_spcW'+str(index))
 
+def doLocator(name, pos=(0,0,0), scl=1, color=None):
+    loc = pm.spaceLocator (n=name, p=(0,0,0))
+    pm.xform (loc, t=pos, ws=True)
+    loc.displayHandle.set(1)
+    locScale = unitCompensateInv(scl)    
+    loc.getShape().localScale.set(locScale, locScale, locScale)
+    if color:
+        loc.getShape().overrideEnabled.set (1)
+        loc.getShape().overrideRGBColors.set(1)
+        loc.getShape().overrideColorRGB.set (color) 
+    return loc
+    
+def unitCompensate(value):
+    unit = pm.currentUnit(q=True,linear=True)
+	
+    if unit == 'mm':
+	return (value * .1)
+    elif unit =='cm':
+	return value
+    elif unit =='m':
+	return(value * 100)
+    elif unit == 'in':
+	return(value * 2.54)
+    elif unit == 'ft':
+	return(value * 30.48)
+    elif unit =='yd':
+	return(value * 91.44)
+    else:
+	return value
+
+def unitCompensateInv(value):
+
+    unit = pm.currentUnit(q=True,linear=True)
+	
+    if unit == 'mm':
+	return (value * 10)
+    elif unit =='cm':
+	return value
+    elif unit =='m':
+	return(value * .01)
+    elif unit == 'in':
+	return(value * 0.393701)
+    elif unit == 'ft':
+	return(value * 0.0328084)
+    elif unit =='yd':
+	return(value * 0.0109361)
+    else:
+	return value
+
+
 def orientMatrix(mvector, normal, pos, axis): 
     #criando a matriz do conforme a orientacao dada pela direcao AB, pela normal e na posicao pos               
+    
     AB=mvector
     nNormal=normal.normal()
-    A=pos   
+    A=unitCompensate(pos)  
     x = nNormal ^ AB.normal()
     t = x.normal() ^ nNormal  
           
@@ -547,6 +598,14 @@ def makeJoint(name='joint', matrix=None, obj=None, connectToLast=False):
         pm.xform (jnt, m = m, ws=True) 
     pm.makeIdentity (jnt, apply=True, r=1, t=0, s=0, n=0, pn=0)
     return jnt       
+
+
+def translateAsVector (obj):
+    p= pm.xform (obj, q=True, t=True, ws=True)
+    A= om.MVector(p)
+    return A
+
+
 	                
 class twistExtractor:
     """
@@ -555,7 +614,7 @@ class twistExtractor:
             twistJntIn: joint a ser calculado
     """  
     
-    def __init__(self, twistJntIn, conn='parentConstraint' ):
+    def __init__(self, twistJntIn, conn='parentConstraint', flipAxis=False):
         
         self.extractor = None
         self.axis= 'X' #hard coding X como eixo. Aparentemente so ele funciona
@@ -623,7 +682,10 @@ class twistExtractor:
         # multiplica por 2 o valor de rot do locator
         pm.addAttr (extractorLoc, ln='extractTwist', at='double', k=1)
         multi = pm.createNode ('multDoubleLinear')
-        multi.input2.set(2)
+        if flipAxis:
+            multi.input2.set(-2)            
+        else:
+            multi.input2.set(2)
         extractorLoc.attr('rotate'+self.axis) >> multi.input1
         multi.output >> extractorLoc.extractTwist
         self.extractor = extractorLoc
@@ -644,9 +706,7 @@ class RibbonBezier:
     def __init__( self, **kwargs ):
         
         self.ribbonDict = {}
-        
-        
-                    
+                           
         self.ribbonDict['size']=kwargs.pop('size', 10)
         self.ribbonDict['name']=kwargs.pop('name','ribbonBezier')
         self.ribbonDict['numJnts']=kwargs.pop('numJnts',10)
@@ -692,7 +752,8 @@ class RibbonBezier:
         noMoveSpace.translate.set(self.size*-0.5,0,0)    
         noMoveBend1 = pm.nurbsPlane ( p=(self.size*-0.25,0,0), ax=(0,0,1), w=self.size*0.5, lr = .1 , d = 3, u =5, v =1)        
         noMoveBend2 = pm.nurbsPlane ( p=(self.size*0.25,0,0), ax=(0,0,1), w=self.size*0.5, lr = .1 , d = 3, u =5, v =1)
-        noMoveCrvJnt = pm.curve ( bezier=True, d=3, p=[(self.size*-0.5,0,0),(self.size*-0.4,0,0),(self.size*-0.1,0,0),(0,0,0),(self.size*0.1,0,0),(self.size*0.4,0,0),(self.size*0.5,0,0)], k=[0,0,0,1,1,1,2,2,2])        
+        #noMoveCrvJnt = pm.curve ( bezier=True, d=3, p=[(self.size*-0.5,0,0),(self.size*-0.4,0,0),(self.size*-0.1,0,0),(0,0,0),(self.size*0.1,0,0),(self.size*0.4,0,0),(self.size*0.5,0,0)], k=[0,0,0,1,1,1,2,2,2])        
+        noMoveCrvJnt = pm.curve ( bezier=True, d=3, p=[(self.size*-0.50,0,0),(self.size*-0.499,0,0),(self.size*-0.496,0,0),(self.size*-0.495,0,0),(self.size*-0.395,0,0),(self.size*-0.10,0,0),(0,0,0),(self.size*0.10,0,0),(self.size*0.395,0,0),(self.size*0.495,0,0),(self.size*0.496,0,0),(self.size*0.499,0,0),(self.size*0.50,0,0)],k=[0,0,0,1,2,3,4,5,6,7,8,9,10,10,10])
         
         #Deformers das superficies noMove
         twist1 = pm.nonLinear(noMoveBend1[0],  type='twist')         #twist das superficies noMove
@@ -720,7 +781,7 @@ class RibbonBezier:
         
         ##Cntrls                
         for i in range (0, 7):
-            anchor = pm.cluster (noMoveCrvJnt.name()+'.cv['+str(i)+']')
+            anchor = pm.cluster (noMoveCrvJnt.name()+'.cv['+str(i+3)+']')
             clsHandle = anchor [1]
             anchorGrp = pm.group (em=True, n='clusterGrp'+str (i))
             anchorDrn = pm.group (em=True, n='clusterDrn'+str (i),p=anchorGrp)
@@ -763,6 +824,14 @@ class RibbonBezier:
             loc.rotate >> anchorDrn.rotate
             cntrlList.append(cntrl)
             locList.append (loc)        
+
+        #workaround do flip do inicio do wire(adicao de mais pontos)
+        startCls = pm.cluster (noMoveCrvJnt.name()+'.cv[0:2]')
+        endCls = pm.cluster (noMoveCrvJnt.name()+'.cv[10:14]')
+        
+        pm.parent (startCls, anchorList[0])
+        pm.parent (endCls, anchorList[6])
+        
         cntrlsSpace.addAttr ('cntrlsVis', at='double', dv=1, k=False, h=True)
         cntrlsSpace.addAttr ('extraCntrlsVis', at='double', dv=0, k=False, h=True)            
         cntrlList[0].addAttr ('twist', at='double', dv=0, k=True)
@@ -1601,7 +1670,9 @@ class RibbonBezierSimple:
 
         noMoveSpace.visibility.set(0)
         noMoveBend1 = pm.nurbsPlane ( p=(self.size*0.5,0,0), ax=(0,0,1), w=self.size, lr = 0.1 , d = 3, u =5, v =1)        
-        noMoveCrvJnt = pm.curve ( bezier=True, d=3, p=[(self.size*-0.5,0,0),(self.size*-0.4,0,0),(self.size*-0.1,0,0),(0,0,0),(self.size*0.1,0,0),(self.size*0.4,0,0),(self.size*0.5,0,0)], k=[0,0,0,1,1,1,2,2,2])        
+        #noMoveCrvJnt = pm.curve ( bezier=True, d=3, p=[(self.size*-0.5,0,0),(self.size*-0.4,0,0),(self.size*-0.1,0,0),(0,0,0),(self.size*0.1,0,0),(self.size*0.4,0,0),(self.size*0.5,0,0)], k=[0,0,0,1,1,1,2,2,2])        
+        noMoveCrvJnt = pm.curve ( bezier=True, d=3, p=[(self.size*-0.50,0,0),(self.size*-0.499,0,0),(self.size*-0.496,0,0),(self.size*-0.495,0,0),(self.size*-0.395,0,0),(self.size*-0.10,0,0),(0,0,0),(self.size*0.10,0,0),(self.size*0.395,0,0),(self.size*0.495,0,0),(self.size*0.496,0,0),(self.size*0.499,0,0),(self.size*0.50,0,0)],k=[0,0,0,1,2,3,4,5,6,7,8,9,10,10,10])
+
         noMoveCrvJnt.translate.set(self.size*0.5,0,0) 
         
         #Deformers das superficies noMove
@@ -1625,7 +1696,7 @@ class RibbonBezierSimple:
         
         ##Cntrls                
         for i in range (0, 7):
-            anchor = pm.cluster (noMoveCrvJnt.name()+'.cv['+str(i)+']')
+            anchor = pm.cluster (noMoveCrvJnt.name()+'.cv['+str(i+3)+']')
             clsHandle = anchor [1]
             anchorGrp = pm.group (em=True, n='clusterGrp'+str (i))
             anchorDrn = pm.group (em=True, n='clusterDrn'+str (i),p=anchorGrp)
@@ -1669,6 +1740,12 @@ class RibbonBezierSimple:
             loc.rotate >> anchorDrn.rotate
             cntrlList.append(cntrl)
             locList.append (loc)
+
+        startCls = pm.cluster (noMoveCrvJnt.name()+'.cv[0:2]')
+        endCls = pm.cluster (noMoveCrvJnt.name()+'.cv[10:14]')
+        
+        pm.parent (startCls, anchorList[0])
+        pm.parent (endCls, anchorList[6])
         
         cntrlsSpace.addAttr ('cntrlsVis', at='double', dv=1, k=False, h=True)
         cntrlsSpace.addAttr ('extraCntrlsVis', at='double', dv=0, k=False, h=True)            
@@ -1752,6 +1829,7 @@ class RibbonBezierSimple:
             pm.parent (cntrl1.getParent(),extraCntrlsGrp)
             pm.parent (jnt1, skinJntsGrp)
             pm.parent (foll1, follGrp)       
+
         
         #seta expressoes para so serem avaliadas por demanda             
         pm.expression (s=expre1, ae=False)

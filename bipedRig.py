@@ -77,7 +77,7 @@ llegShoulder.getGuideFromScene()
 rlegShoulder=Chain(name='R_legShoulder' , fkCntrlSetup = {'nameTempl':'R_legClaviculeFk', 'icone':'dropMenosY','size':.4,'color':(0,1,0) }, flipAxis=True)
 rlegShoulder.getGuideFromScene()
 
-m=Moveall(name='menino')
+m=Moveall(name='homem')
 m.getGuideFromScene()
 
 ##Rig
@@ -144,29 +144,29 @@ pm.parent ( rleg.ikCntrl.getParent(), rfoot.limbConnectionCntrl)
 pm.parentConstraint ( lleg.startCntrl, lfoot.ankleFkCntrl, mo=True)
 pm.parentConstraint ( rleg.startCntrl, rfoot.ankleFkCntrl, mo=True)
 
-s.hipCntrl.addAttr ('L_Arm_IkFk', at='float', dv=1, max=1, min=0, k=1)
-s.hipCntrl.addAttr ('R_Arm_IkFk', at='float', dv=1, max=1, min=0, k=1)
-s.hipCntrl.addAttr ('L_Leg_IkFk', at='float', dv=1, max=1, min=0, k=1)
-s.hipCntrl.addAttr ('R_Leg_IkFk', at='float', dv=1, max=1, min=0, k=1)
-s.hipCntrl.addAttr ('Spine_IkFk', at='float', dv=1, max=1, min=0, k=1)
+s.cogCntrl.addAttr ('L_Arm_IkFk', at='float', dv=1, max=1, min=0, k=1)
+s.cogCntrl.addAttr ('R_Arm_IkFk', at='float', dv=1, max=1, min=0, k=1)
+s.cogCntrl.addAttr ('L_Leg_IkFk', at='float', dv=1, max=1, min=0, k=1)
+s.cogCntrl.addAttr ('R_Leg_IkFk', at='float', dv=1, max=1, min=0, k=1)
+s.cogCntrl.addAttr ('Spine_IkFk', at='float', dv=1, max=1, min=0, k=1)
 
-s.hipCntrl.addAttr ('L_Arm_poleVec', at='float', dv=0, max=1, min=0, k=1)
-s.hipCntrl.addAttr ('R_Arm_poleVec', at='float', dv=0, max=1, min=0, k=1)
-s.hipCntrl.addAttr ('L_Leg_poleVec', at='float', dv=0, max=1, min=0, k=1)
-s.hipCntrl.addAttr ('R_Leg_poleVec', at='float', dv=0, max=1, min=0, k=1)
+s.cogCntrl.addAttr ('L_Arm_poleVec', at='float', dv=0, max=1, min=0, k=1)
+s.cogCntrl.addAttr ('R_Arm_poleVec', at='float', dv=0, max=1, min=0, k=1)
+s.cogCntrl.addAttr ('L_Leg_poleVec', at='float', dv=0, max=1, min=0, k=1)
+s.cogCntrl.addAttr ('R_Leg_poleVec', at='float', dv=0, max=1, min=0, k=1)
 
-s.hipCntrl.Spine_IkFk >> s.moveall.ikfk
-s.hipCntrl.R_Leg_IkFk >> rleg.moveall.ikfk
-s.hipCntrl.L_Leg_IkFk >> lleg.moveall.ikfk
-s.hipCntrl.R_Leg_IkFk >> rfoot.moveall.ikfk
-s.hipCntrl.L_Leg_IkFk >> lfoot .moveall.ikfk
-s.hipCntrl.R_Arm_IkFk >> rarm.moveall.ikfk
-s.hipCntrl.L_Arm_IkFk >> larm.moveall.ikfk
+s.cogCntrl.Spine_IkFk >> s.moveall.ikfk
+s.cogCntrl.R_Leg_IkFk >> rleg.moveall.ikfk
+s.cogCntrl.L_Leg_IkFk >> lleg.moveall.ikfk
+s.cogCntrl.R_Leg_IkFk >> rfoot.moveall.ikfk
+s.cogCntrl.L_Leg_IkFk >> lfoot .moveall.ikfk
+s.cogCntrl.R_Arm_IkFk >> rarm.moveall.ikfk
+s.cogCntrl.L_Arm_IkFk >> larm.moveall.ikfk
 
-s.hipCntrl.R_Arm_poleVec >> rarm.moveall.poleVec
-s.hipCntrl.L_Arm_poleVec >> larm.moveall.poleVec
-s.hipCntrl.R_Leg_poleVec >> rleg.moveall.poleVec
-s.hipCntrl.L_Leg_poleVec >> lleg.moveall.poleVec
+s.cogCntrl.R_Arm_poleVec >> rarm.moveall.poleVec
+s.cogCntrl.L_Arm_poleVec >> larm.moveall.poleVec
+s.cogCntrl.R_Leg_poleVec >> rleg.moveall.poleVec
+s.cogCntrl.L_Leg_poleVec >> lleg.moveall.poleVec
 
 lfoot.baseCntrl.addAttr ('pin', at='float',min=0, max=1,dv=0, k=1)
 lfoot.baseCntrl.addAttr ('bias', at='float',min=-0.9, max=0.9, k=1)
@@ -197,9 +197,9 @@ if pm.objExists ('spaces'):
 createSpc (None, 'global')
 createSpc (larm.lastJnt, 'lhand')
 createSpc (rarm.lastJnt, 'rhand')
-createSpc (s.hipCntrl, 'hip')
+createSpc (s.cogCntrl, 'cog')
 createSpc (s.endJnt, 'chest')
-createSpc (s.startJnt, 'cog')
+createSpc (s.startJnt, 'hip')
 createSpc (lleg.lastJnt, 'lfoot')
 createSpc (rleg.lastJnt, 'rfoot')
 createSpc (lclav.jntList[-1], 'lclav')

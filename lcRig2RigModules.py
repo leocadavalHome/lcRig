@@ -195,29 +195,22 @@ class Limb():
             pm.parent ( self.guideMoveall, 'GUIDES')
                        
         guideName=self.limbDict['startGuideSetup']['nameTempl']+self.guideSulfix
-        self.startGuide = pm.spaceLocator (n=guideName, p=(0,0,0))
-        pm.xform (self.startGuide, t=self.limbGuideDict['start'], ws=True)
-        self.startGuide.displayHandle.set(1)
+        self.startGuide = doLocator(name=guideName,pos=self.limbGuideDict['start'])
+
 
         guideName=self.limbDict['midGuideSetup']['nameTempl']+self.guideSulfix
-        self.midGuide = pm.spaceLocator (n=guideName, p=(0,0,0))
-        pm.xform (self.midGuide, t=self.limbGuideDict['mid'], ws=True)
-        self.midGuide.displayHandle.set(1)
+        self.midGuide = doLocator(name=guideName,pos=self.limbGuideDict['mid'])
 
         guideName=self.limbDict['endGuideSetup']['nameTempl']+self.guideSulfix
-        self.endGuide = pm.spaceLocator (n=guideName, p=(0,0,0))
-        pm.xform (self.endGuide, t=self.limbGuideDict['end'], ws=True)
-        self.endGuide.displayHandle.set(1)
+        self.endGuide = doLocator(name=guideName,pos=self.limbGuideDict['end'])
         
         pm.parent (self.startGuide, self.midGuide, self.endGuide, self.guideMoveall)
                
         if self.lastJoint:
             guideName=self.limbDict['lastGuideSetup']['nameTempl']+self.guideSulfix
-            self.lastGuide = pm.spaceLocator (n=guideName, p=(0,0,0))
-            pm.xform (self.lastGuide, t=self.limbGuideDict['last'], ws=True)
-            pm.parent (self.lastGuide, self.endGuide)
-            self.lastGuide.displayHandle.set(1)
-            
+            self.lastGuide = doLocator(name=guideName,pos=self.limbGuideDict['last'])
+            pm.parent (self.lastGuide, self.endGuide) 
+                       
         #cria a curva da direcao do plano
         arrow=cntrlCrv(obj=self.startGuide,name=self.name+'PlaneDir',icone='seta', size=.35, color=(0,1,1))
         arrow.getParent().setParent(self.startGuide)
@@ -305,19 +298,14 @@ class Limb():
         
 
         
-        #define pontos do guide como vetores usando api para faciitar os calculos
-        p1 = pm.xform (self.startGuide, q=True, t=True, ws=True)
-        p2 = pm.xform (self.midGuide, q=True, t=True, ws=True)
-        p3 = pm.xform (self.endGuide, q=True, t=True, ws=True)
-        
-        A= om.MVector(p1)
-        B= om.MVector(p2)
-        C= om.MVector(p3)
-        
+        #define pontos do guide como vetores usando api para faciitar os calculos        
+        A= translateAsVector(self.startGuide)
+        B= translateAsVector(self.midGuide)
+        C= translateAsVector(self.endGuide)
+                                    
         if self.lastJoint:
-            p4=pm.xform (self.lastGuide, q=True, t=True, ws=True)
-            D=om.MVector(p4)
-        
+            D= translateAsVector(self.lastGuide)
+            
         #Calculando a normal do plano definido pelo guide
         #invertendo inverte a direcao do eixo ao longo do vetor        
         if self.flipAxis:
@@ -333,7 +321,8 @@ class Limb():
         
         self.jointLength=AB.length()+BC.length() 
         
-        m = orientMatrix (mvector=AB,normal=n,pos=A, axis=self.axis)            
+        m = orientMatrix (mvector=AB,normal=n,pos=A, axis=self.axis) 
+                   
         #cria joint1
         pm.select(cl=True)
         jntName= self.limbDict['startJntSetup']['nameTempl']+self.jntSulfix
@@ -498,7 +487,7 @@ class Limb():
         startGrp = pm.group (empty=True)
         endGrp=pm.group (empty=True)
         pm.parent (endGrp,self.ikCntrl,r=True)
-        pm.xform (startGrp , t=p1, ws=True)
+        pm.xform (startGrp , t=A, ws=True)
         pm.parent (startGrp,self.endCntrl)
         
         ##NODE TREE####### 
@@ -526,8 +515,7 @@ class Limb():
         poleCond.outColorR >> self.poleVec.visibility 
               
         #Pin
-        p5 = pm.xform (self.poleVec.getParent(), q=True, t=True, ws=True)
-        E=om.MVector (p5)
+        E= translateAsVector(self.poleVec.getParent())
         
         AE = A - E
         CE = E - C
@@ -776,39 +764,28 @@ class Finger:
             pm.parent ( self.guideMoveall, 'GUIDES')        
 
         guideName=self.fingerDict['palmGuideSetup']['nameTempl']+self.guideSulfix
-        self.palmGuide = pm.spaceLocator (n=guideName,p=(0,0,0))
-        self.palmGuide.displayHandle.set(1)
-        self.palmGuide.localScale.set(0.1,0.1,0.1) 
+        self.palmGuide = doLocator(name=guideName, scl=0.1)
 
         guideName=self.fingerDict['baseGuideSetup']['nameTempl']+self.guideSulfix
-        self.baseGuide = pm.spaceLocator (n=guideName,p=(0,0,0))
-        self.baseGuide.displayHandle.set(1)
-        self.baseGuide.translate.set(1.3,0,0)
-        self.baseGuide.localScale.set(0.1,0.1,0.1)
+        self.baseGuide = doLocator(name=guideName,pos=(1.3,0,0), scl=0.1)
         
         guideName=self.fingerDict['tipGuideSetup']['nameTempl']+self.guideSulfix
-        self.tipGuide = pm.spaceLocator (n=guideName,p=(0,0,0))
-        self.tipGuide.displayHandle.set(1)
-        self.tipGuide.translate.set(1.7,0,0)
-        self.tipGuide.localScale.set(0.1,0.1,0.1)
+        self.tipGuide = doLocator(name=guideName,pos=(1.7,0,0), scl=0.1)
+
         pm.parent (self.tipGuide, self.baseGuide,self.palmGuide, self.guideMoveall)
        
         #cria conforme o numero de dobras       
         if self.folds==2:
             guideName=self.fingerDict['fold1GuideSetup']['nameTempl']+self.guideSulfix
-            self.fold1Guide = pm.spaceLocator (n=guideName,p=(0,0,0))
-            self.fold1Guide.displayHandle.set(1)        
+            self.fold1Guide = doLocator(name=guideName, scl=0.1)
             fold1GuideGrp = pm.group(self.fold1Guide)
             fold1GuideGrp.translate.set(1.3,0,0)
-            self.fold1Guide.localScale.set(0.1,0.1,0.1)
-
+             
             guideName=self.fingerDict['fold2GuideSetup']['nameTempl']+self.guideSulfix
-            self.fold2Guide = pm.spaceLocator (n=guideName,p=(0,0,0))  
-            self.fold2Guide.displayHandle.set(1)       
+            self.fold2Guide = doLocator(name=guideName, scl=0.1)
             fold2GuideGrp = pm.group(self.fold2Guide)
             fold2GuideGrp.translate.set(1.7,0,0)
-            self.fold2Guide.localScale.set(0.1,0.1,0.1)
-                    
+                   
             pm.aimConstraint(self.fold1Guide,self.baseGuide, weight=1, aimVector=(1, 0 ,0) , upVector=(0, 1, 0),worldUpVector=(0,1,0), worldUpType='scene')
             pm.aimConstraint(self.fold2Guide,self.fold1Guide, weight=1, aimVector=(1, 0 ,0) , upVector=(0, 1, 0),worldUpVector=(0,1,0), worldUpType='scene')
             pm.aimConstraint(self.fold2Guide,self.tipGuide, weight=1, aimVector=(-1, 0 ,0) , upVector=(0, 1, 0),worldUpVector=(0,1,0), worldUpType='scene')
@@ -823,11 +800,9 @@ class Finger:
             
         elif self.folds==1:
             guideName=self.fingerDict['fold1GuideSetup']['nameTempl']+self.guideSulfix
-            self.fold1Guide = pm.spaceLocator (n=guideName,p=(0,0,0))        
-            self.fold1Guide.displayHandle.set(1) 
+            self.fold1Guide = doLocator(name=guideName, scl=0.1)
             fold1GuideGrp = pm.group(self.fold1Guide)
             fold1GuideGrp.translate.set(1.3,0,0)
-            self.fold1Guide.localScale.set(0.1,0.1,0.1)
             
             pm.aimConstraint(self.fold1Guide,self. baseGuide, weight=1, aimVector=(1, 0 ,0) , upVector=(0, 1, 0),worldUpVector=(0,1,0), worldUpType='scene')
             pm.aimConstraint(self.tipGuide,fold1GuideGrp, weight=1, aimVector=(1, 0 ,0) , upVector=(0, 1, 0),worldUpVector=(0,1,0), worldUpType='scene')
@@ -838,11 +813,9 @@ class Finger:
             
         elif self.folds==0:    
             guideName=self.fingerDict['fold1GuideSetup']['nameTempl']+self.guideSulfix
-            self.fold1Guide = pm.spaceLocator (n=guideName,p=(0,0,0))        
-            self.fold1Guide.displayHandle.set(1) 
+            self.fold1Guide = doLocator(name=guideName, scl=0.1)
             fold1GuideGrp = pm.group(self.fold1Guide)
             fold1GuideGrp.translate.set(1.3,0,0)
-            self.fold1Guide.localScale.set(0.1,0.1,0.1)
              
             pm.aimConstraint(self.tipGuide, self.baseGuide, weight=1, aimVector=(1, 0 ,0) , upVector=(0, 1, 0),worldUpVector=(0,1,0), worldUpType='scene')
             pm.aimConstraint(self.baseGuide,self.tipGuide, weight=1, aimVector=(-1, 0 ,0) , upVector=(0, 1, 0),worldUpVector=(0,1,0), worldUpType='scene')
@@ -901,16 +874,12 @@ class Finger:
 
         pos =pm.xform (self.guideMoveall, q=True, ws=True, t=True)
         pm.xform (self.moveall, ws=True, t=pos)
- 
-        base=pm.xform (self.baseGuide, q=True,ws=True, t=True)
-        tip=pm.xform (self.tipGuide, q=True,ws=True, t=True)
-        palm=pm.xform (self.palmGuide, q=True,ws=True, t=True)
-        fold1=pm.xform (self.fold1Guide, q=True,ws=True, t=True)
-        
+         
         #coordenadas dos 3 guides default para calculo da normal do plano de rotacao do dedo
-        A=om.MVector(base)
-        B=om.MVector(fold1)
-        C=om.MVector(tip)
+
+        A= translateAsVector(self.baseGuide)
+        B= translateAsVector(self.fold1Guide)
+        C= translateAsVector(self.tipGuide)
         
         if self.flipAxis:
             AB=A-B
@@ -924,20 +893,19 @@ class Finger:
         #conforme o numero de dobras, especifica as guides
         #atualmente podem ser 0,1 ou 2 dobras
         if self.folds==2:
-            fold2=pm.xform (self.fold2Guide, q=True,ws=True, t=True)
-            guide=[palm,base,fold1,fold2,tip]
+            guide=[self.palmGuide,self.baseGuide,self.fold1Guide,self.fold2Guide,self.tipGuide]
             jntNames= [self.fingerDict['palmJntSetup']['nameTempl'],self.fingerDict['baseJntSetup']['nameTempl'],self.fingerDict['fold1JntSetup']['nameTempl'],self.fingerDict['fold2JntSetup']['nameTempl'], self.fingerDict['tipJntSetup']['nameTempl']]
         elif self.folds==1:
-            guide=[palm,base,fold1,tip]
+            guide=[self.palmGuide,self.baseGuide,self.fold1Guide,self.tipGuide]
         elif self.folds==0:
-            guide=[palm,base,tip]
+            guide=[self.palmGuide,self.baseGuide,self.tipGuide]
         
         #cria os joints conforme a orientacao
         fingerJnts = []  
         pm.select(cl=True) 
         for i in range(0,len(guide)-1):
-            A=om.MVector(guide[i])
-            B=om.MVector(guide[i+1])
+            A=translateAsVector(guide[i])
+            B=translateAsVector(guide[i+1])
             if self.flipAxis:
                 AB=A-B
             else:
@@ -1249,48 +1217,28 @@ class Foot:
         #cria guides segundo os nomes dos controles e nas posicoes definidas no dicionario footGuideDict 
 
         guideName=self.footDict['centerGuideSetup']['nameTempl']+self.guideSulfix
-        self.centerGuide=pm.spaceLocator (n=guideName, p=(0,0,0))
-        self.centerGuide.localScale.set(.2,.2,.2)
-        self.centerGuide.displayHandle.set(1)
+        self.centerGuide = doLocator(name=guideName, scl=0.2)        
         
         guideName=self.footDict['centerGuideSetup']['nameTempl']+self.grpSulfix
         self.centerGuideGrp=pm.group(self.centerGuide, n=guideName)
         
         guideName=self.footDict['tipGuideSetup']['nameTempl']+self.guideSulfix
-        self.tipGuide=pm.spaceLocator (n=guideName,p=(0,0,0))
-        self.tipGuide.translate.set(self.footGuideDict['tip'])
-        self.tipGuide.localScale.set(.2,.2,.2)
-        self.tipGuide.displayHandle.set(1)
+        self.tipGuide = doLocator(name=guideName,pos=self.footGuideDict['tip'], scl=0.2)        
                 
         guideName=self.footDict['heelGuideSetup']['nameTempl']+self.guideSulfix
-        self.heelGuide=pm.spaceLocator (n=guideName,p=(0,0,0))
-        self.heelGuide.translate.set(self.footGuideDict['heel'])
-        self.heelGuide.localScale.set(.2,.2,.2)
-        self.heelGuide.displayHandle.set(1)
-        
+        self.heelGuide = doLocator(name=guideName,pos=self.footGuideDict['heel'], scl=0.2)        
+                
         guideName=self.footDict['ankleGuideSetup']['nameTempl']+self.guideSulfix
-        self.ankleGuide=pm.spaceLocator (n=guideName,p=(0,0,0))
-        self.ankleGuide.translate.set(self.footGuideDict['ankle'])
-        self.ankleGuide.localScale.set(.2,.2,.2)
-        self.ankleGuide.displayHandle.set(1)
+        self.ankleGuide = doLocator(name=guideName,pos=self.footGuideDict['ankle'], scl=0.2)        
         
         guideName=self.footDict['ballGuideSetup']['nameTempl']+self.guideSulfix
-        self.ballGuide=pm.spaceLocator (n=guideName,p=(0,0,0))
-        self.ballGuide.translate.set(self.footGuideDict['ball'])
-        self.ballGuide.localScale.set(.2,.2,.2)
-        self.ballGuide.displayHandle.set(1)
+        self.ballGuide = doLocator(name=guideName,pos=self.footGuideDict['ball'], scl=0.2)        
         
         guideName=self.footDict['inGuideSetup']['nameTempl']+self.guideSulfix
-        self.inGuide=pm.spaceLocator (n=guideName,p=(0,0,0))
-        self.inGuide.translate.set(self.footGuideDict['in'])
-        self.inGuide.localScale.set(.2,.2,.2)
-        self.inGuide.displayHandle.set(1)
+        self.inGuide = doLocator(name=guideName,pos=self.footGuideDict['in'], scl=0.2)        
         
         guideName=self.footDict['outGuideSetup']['nameTempl']+self.guideSulfix
-        self.outGuide=pm.spaceLocator (n=guideName,p=(0,0,0))
-        self.outGuide.translate.set(self.footGuideDict['out'])
-        self.outGuide.localScale.set(.2,.2,.2)
-        self.outGuide.displayHandle.set(1)
+        self.outGuide = doLocator(name=guideName,pos=self.footGuideDict['out'], scl=0.2)        
 
         for finger in self.footDict['fingers']:                                                                                  
             f = self.footDict['fingers'][finger]['instance']
@@ -1435,16 +1383,12 @@ class Foot:
             pm.delete (cntrlName)
             
         #esqueleto
-        center=pm.xform (self.centerGuide, q=True,ws=True, t=True)
-        tip=pm.xform (self.tipGuide, q=True,ws=True, t=True)
-        ankle=pm.xform (self.ankleGuide, q=True,ws=True, t=True)
-        ball=pm.xform (self.ballGuide, q=True,ws=True, t=True)
-        
-        A=om.MVector(ankle)
-        B=om.MVector(center)
-        C=om.MVector(tip)
-        D=om.MVector(ball)
-        
+
+        A= translateAsVector(self.ankleGuide)
+        B= translateAsVector(self.centerGuide)
+        C= translateAsVector(self.tipGuide)
+        D= translateAsVector(self.ballGuide)
+       
         #calcula a normal do sistema no triangulo entre center, ankle e tip. 
         # pode ser q isso de problemas se mal colocados. 
         #IMPLEMENTAR limites dos guides para evitar ma colocacao
@@ -1486,7 +1430,7 @@ class Foot:
         tipIkh = pm.ikHandle (sj=j2, ee=j3, sol="ikRPsolver")
         
         self.moveall=pm.group (em=True,n=cntrlName)
-        self.moveall.translate.set(center)
+        self.moveall.translate.set(B)
         if not pm.objExists('MOVEALL'):
             pm.group ( self.moveall, n='MOVEALL' )
         else:
@@ -1503,7 +1447,7 @@ class Foot:
         cntrlName = displaySetup['nameTempl']        
         self.baseCntrl=cntrlCrv(name=cntrlName,obj=self.centerGuide, **displaySetup)
         pm.move (.8,0,0, self.baseCntrl, r=True, os=True)
-        pm.xform (self.baseCntrl, rp=ankle, ws=True)
+        pm.xform (self.baseCntrl, rp=A, ws=True)
         pm.scale (self.baseCntrl, [1,1,.5], r=True)
         pm.makeIdentity (self.baseCntrl, apply=True, r=0, t=1, s=1, n=0, pn=0)
         self.baseCntrl.addAttr ('extraRollCntrls',min=0, max=1, dv=0, k=1)
@@ -1583,7 +1527,7 @@ class Foot:
         pm.parent (j1,self.baseCntrl.getParent(),self.moveall)
         
         #rollCntrl
-        rollCntrl.addAttr ('heelLimit',dv=50,k=1,at='float')
+        rollCntrl.addAttr ('heelLimit',dv=unitCompensateInv(50),k=1,at='float')
         rollBlend=pm.createNode('blendColors')
         rollCntrl.heelLimit >> rollBlend.color1.color1R
         
@@ -1749,35 +1693,24 @@ class Spine:
             pm.parent ( self.guideMoveall, 'GUIDES')
                     
         guideName=self.spineDict['startGuideSetup']['nameTempl']+self.guideSulfix
-        self.startGuide = pm.spaceLocator (n=guideName, p=(0,0,0))
-        self.startGuide.translate.set(self.spineGuideDict['start'])
-        self.startGuide.displayHandle.set(1)
+        self.startGuide = doLocator(name=guideName,pos=self.spineGuideDict['start'])        
         
         guideName=self.spineDict['midGuideSetup']['nameTempl']+self.guideSulfix               
-        self.midGuide = pm.spaceLocator (n=guideName,p=(0,0,0))
-        self.midGuide.translate.set(self.spineGuideDict['mid'])
-        self.midGuide.displayHandle.set(1)
+        self.midGuide = doLocator(name=guideName,pos=self.spineGuideDict['mid'])        
 
         guideName=self.spineDict['endGuideSetup']['nameTempl']+self.guideSulfix               
-        self.endGuide = pm.spaceLocator (n=guideName, p=(0,0,0))
-        self.endGuide.translate.set(self.spineGuideDict['end'])
-        self.endGuide.displayHandle.set(1)
+        self.endGuide = doLocator(name=guideName,pos=self.spineGuideDict['end'])        
         midGuideGrp=pm.group (em=True)
         pm.pointConstraint (self.startGuide, self.endGuide, midGuideGrp, mo=False)
         self.midGuide.setParent(midGuideGrp)
 
         guideName=self.spineDict['endTipGuideSetup']['nameTempl']+self.guideSulfix               
-        self.endTipGuide = pm.spaceLocator (n=guideName, p=(0,0,0))
-        self.endTipGuide.translate.set(self.spineGuideDict['endTip'])
-        self.endTipGuide.displayHandle.set(1)        
-        self.endTipGuide.localScale.set(.5,.5,.5) 
+        self.endTipGuide = doLocator(name=guideName,pos=self.spineGuideDict['endTip'], scl=0.5) 
         self.endTipGuide.setParent(self.endGuide)
         
+        
         guideName=self.spineDict['startTipGuideSetup']['nameTempl']+self.guideSulfix               
-        self.startTipGuide = pm.spaceLocator (n=guideName, p=(0,0,0))
-        self.startTipGuide.translate.set(self.spineGuideDict['startTip'])
-        self.startTipGuide.displayHandle.set(1)        
-        self.startTipGuide.localScale.set(.5,.5,.5) 
+        self.startTipGuide = doLocator(name=guideName,pos=self.spineGuideDict['startTip'], scl=0.5) 
         self.startTipGuide.setParent(self.startGuide)
 
         pm.parent (self.startGuide,midGuideGrp,self.endGuide, self.guideMoveall)
@@ -1867,8 +1800,6 @@ class Spine:
         self.endIkCntrl.getParent().setParent(self.cogCntrl)    
             
         #Cria os joints orientados em X down
-        start=pm.xform(self.startGuide,q=True,t=True,ws=True)
-        startTip=pm.xform(self.startTipGuide,q=True,t=True,ws=True)
         pm.select(cl=True)
         jntName=self.spineDict['startJntSetup']['nameTempl']+self.zeroJxtSulfix
         self.startZeroJnt=pm.joint(p=(0,0,0), n=jntName)
@@ -1878,10 +1809,11 @@ class Spine:
         pm.select(cl=True)
         jntName=self.spineDict['startJntSetup']['nameTempl']+self.tipJxtSulfix
         self.startTipJnt=pm.joint(p=(0,0,0), n=jntName)
-     
-        A=om.MVector(start)
-        B=om.MVector(startTip)
-        Z=om.MVector(0,0,1)
+
+        A= translateAsVector(self.startGuide)
+        B= translateAsVector(self.startTipGuide)
+        Z=om.MVector(0,0,1) 
+
         AB=B-A
         
         dot = Z.normal()*AB.normal() #se o eixo Z, usado como secundario, for quase paralelo ao vetor do Bone, troca pra eixo Y como secundario
@@ -1899,8 +1831,6 @@ class Spine:
         pm.parent (self.startJnt,self.startZeroJnt)
         pm.parent (self.startTipJnt, self.startJnt)
         
-        end=pm.xform(self.endGuide,q=True,t=True,ws=True)
-        endTip=pm.xform(self.endTipGuide,q=True,t=True,ws=True)
         pm.select(cl=True)
         jntName=self.spineDict['endJntSetup']['nameTempl']+self.zeroJxtSulfix
         self.endZeroJnt=pm.joint(p=(0,0,0), n=jntName)
@@ -1911,9 +1841,10 @@ class Spine:
         jntName=self.spineDict['endJntSetup']['nameTempl']+self.tipJxtSulfix
         self.endTipJnt=pm.joint(p=(0,0,0), n=jntName)
 
-        A=om.MVector(end)
-        B=om.MVector(endTip)
-        Z=om.MVector(0,0,1)
+        A= translateAsVector(self.endGuide)
+        B= translateAsVector(self.endTipGuide)
+        Z=om.MVector(0,0,1) 
+
         AB=B-A
         
         dot = Z.normal()*AB.normal() #se o eixo Z, usado como secundario, for quase paralelo ao vetor do Bone, troca pra eixo Y como secundario
@@ -1937,8 +1868,8 @@ class Spine:
         
         #ribbon
         #calcular a distancia entre os guides pra fazer ribbon do tamanho certo
-        A=om.MVector(start)
-        B=om.MVector(end)
+        A=translateAsVector(self.startGuide)
+        B=translateAsVector(self.endGuide)
         Z=om.MVector(0,0,-1)  
         AB=B-A  
         
@@ -2102,10 +2033,8 @@ class Chain:
         self.guideList=[]
         for i in range(len(self.chainGuideDict.keys())-1):
             guideName= self.chainDict['guideSetup']['nameTempl']+str(i)+self.guideSulfix
-            guide= pm.spaceLocator (n=guideName,p=(0,0,0))
+            guide = doLocator(name=guideName,pos=self.chainGuideDict['guide'+str(i+1)]) 
             self.guideList.append (guide)
-            guidePos = self.chainGuideDict['guide'+str(i+1)]
-            pm.xform(guide, t=guidePos, ws=True)
             pm.parent(guide, self.guideMoveall)
         self.guideMoveall.translate.set (self.chainGuideDict['moveall'])
 
@@ -2170,8 +2099,7 @@ class Chain:
         AB=[]
         last=None
         for obj in self.guideList:
-            p=pm.xform (obj, q=True, t=True, ws=True)
-            P=om.MVector(p)
+            P= translateAsVector(obj)
             #guarda na lista A as posicoes dos guides como MVector
             A.append(P)
             #calcula vetores de direcao entre os guides
@@ -2312,12 +2240,11 @@ class Neck:
             pm.parent ( self.guideMoveall, 'GUIDES')
 
         cntrlName=self.neckDict['startGuideSetup']['nameTempl']+self.guideSulfix
-        self.startGuide=pm.spaceLocator (p=(0,0,0), n=cntrlName)
-        pm.xform (self.startGuide, t=self.neckGuideDict['start'], ws=True)
-        
+        self.startGuide = doLocator(name=cntrlName,pos=self.neckGuideDict['start'])        
+
         cntrlName=self.neckDict['endGuideSetup']['nameTempl']+self.guideSulfix
-        self.endGuide=pm.spaceLocator (p=(0,0,0),n=cntrlName)
-        pm.xform (self.endGuide, t=self.neckGuideDict['end'], ws=True)
+        self.endGuide = doLocator(name=cntrlName,pos=self.neckGuideDict['end'])        
+
         pm.parent (self.startGuide,self.endGuide,self.guideMoveall)
         
         self.guideMoveall.translate.set(self.neckGuideDict['moveall'])
@@ -2350,12 +2277,10 @@ class Neck:
             pm.parent (self.moveall, 'MOVEALL')
             
         #doRig
-        start =pm.xform (self.startGuide, q=True, t=True,ws=True)
-        end =pm.xform (self.endGuide, q=True, t=True,ws=True)
-        
-        A=om.MVector(start)
-        B=om.MVector(end)
+        A= translateAsVector(self.startGuide)
+        B= translateAsVector(self.endGuide)
         Z=om.MVector(0,0,-1) 
+        
         AB=B-A  
         dot = Z.normal()*AB.normal() #se o eixo Z, usado como secundario, for quase paralelo ao vetor do Bone, troca pra eixo Y como secundario
         if abs(dot)>.95:
